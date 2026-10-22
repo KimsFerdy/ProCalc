@@ -82,6 +82,30 @@ impl Func {
     }
 }
 
+/// Operations that rewrite an expression without changing its value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SymOp {
+    Expand,
+    Factor,
+}
+
+impl SymOp {
+    pub fn from_name(name: &str) -> Option<SymOp> {
+        match name {
+            "expand" => Some(SymOp::Expand),
+            "factor" => Some(SymOp::Factor),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            SymOp::Expand => "expand",
+            SymOp::Factor => "factor",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     Add,
@@ -109,4 +133,6 @@ pub enum Expr {
     Factorial(Box<Expr>, u32),
     /// x% = x/100.
     Percent(Box<Expr>),
+    /// `expand(...)`, `factor(...)`.
+    Op(SymOp, Box<Expr>),
 }

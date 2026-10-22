@@ -106,6 +106,19 @@
     scrollToEnd();
   }
 
+  /** Runs expand/factor on a history entry and adds the result as a new entry. */
+  async function applyOp(entry: Entry, op: "expand" | "factor") {
+    const latex = `\\operatorname{${op}}\\left(${entry.input}\\right)`;
+    const r = await evaluate(latex, settings);
+    if (!r.ok) {
+      inputError = r.error.message;
+      return;
+    }
+    history = [...history, { id: nextId++, input: latex, answer: r.answer, error: null }];
+    save();
+    scrollToEnd();
+  }
+
   async function scrollToEnd() {
     await tick();
     feed?.scrollTo({ top: feed.scrollHeight, behavior: "smooth" });
@@ -198,6 +211,7 @@
         <ul>
           <li><code>sqrt</code> → √, <code>/</code> → fraction, <code>^</code> → power, <code>pi</code> → π</li>
           <li>Results stay <b>exact</b> when they can (0.1 + 0.2 = 3/10), with up to 1000 digits otherwise.</li>
+          <li>Algebra works too: <code>x+x</code>, <code>factor(x^2-1)</code>, <code>expand((x+1)^3)</code></li>
           <li><kbd>Enter</kbd> to calculate · click a result to reuse it</li>
         </ul>
       </div>
@@ -225,6 +239,10 @@
               <button class="ghost small" onclick={() => copy(entry)}>
                 {copied === entry.id ? "Copied" : "Copy"}
               </button>
+              {#if a.symbolic}
+                <button class="ghost small" onclick={() => applyOp(entry, "expand")}>Expand</button>
+                <button class="ghost small" onclick={() => applyOp(entry, "factor")}>Factor</button>
+              {/if}
             </div>
           {/if}
         </article>
@@ -465,7 +483,9 @@
     position: absolute;
     left: 12px;
     bottom: 10px;
-    opacity: 0;
+    display: flex;
+    gap: 6px;
+    opacity: 0.45;
     transition: opacity 120ms;
   }
 

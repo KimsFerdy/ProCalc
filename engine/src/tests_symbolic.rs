@@ -25,6 +25,9 @@ fn like_terms_collect() {
     assert_eq!(sym("2x+3y-x+y"), "x+4y");
     assert_eq!(sym("y+x"), sym("x+y"));
     assert_eq!(sym("x+1+x+2"), "2x+3");
+    // Regression: a product starting with plain letters used to crash the printer.
+    assert_eq!(sym("ab^{2}"), "ab^{2}");
+    assert_eq!(sym("yx"), "xy");
 }
 
 #[test]
@@ -245,5 +248,96 @@ fn nasty_inputs_never_panic() {
         let r = std::panic::catch_unwind(|| evaluate(c, &Settings::default()));
         assert!(r.is_ok(), "{c} panicked");
         assert!(t.elapsed().as_secs_f64() < 3.0, "{c} took {:?}", t.elapsed());
+    }
+}
+
+// ---------- Expand and factor ----------
+
+#[test]
+fn expand_products_and_powers() {
+    assert_eq!(sym("expand((x+1)^{2})"), "x^{2}+2x+1");
+    assert_eq!(sym("expand((x+1)^{3})"), "x^{3}+3x^{2}+3x+1");
+    assert_eq!(sym("expand((a+b)(a-b))"), "a^{2}-b^{2}");
+    assert_eq!(sym("expand(2(x+3))"), "2x+6");
+    assert_eq!(sym("expand((x+y+z)^{2})"), "x^{2}+2xy+2xz+y^{2}+2yz+z^{2}");
+    assert_eq!(sym("expand((\\sqrt{2}+1)^{2})"), "2\\sqrt{2}+3");
+    assert_eq!(sym("\\operatorname{expand}\\left((x-1)(x+1)\\right)"), "x^{2}-1");
+}
+
+#[test]
+fn expand_has_a_size_limit() {
+    assert!(evaluate("expand((x+y+z)^{100})", &Settings::default()).is_err());
+}
+
+#[test]
+fn factor_polynomials() {
+    assert_eq!(sym("factor(x^2-1)"), "\\left(x-1\\right)\\left(x+1\\right)");
+    assert_eq!(sym("factor(6x^2+3x)"), "3x\\left(2x+1\\right)");
+    assert_eq!(sym("factor(x^2+2x+1)"), "\\left(x+1\\right)^{2}");
+    assert_eq!(sym("factor(4x^2-12x+9)"), "\\left(2x-3\\right)^{2}");
+    assert_eq!(sym("factor(2x^2-x-1)"), "\\left(x-1\\right)\\left(2x+1\\right)");
+    assert_eq!(
+        sym("factor(x^3-6x^2+11x-6)"),
+        "\\left(x-3\\right)\\left(x-2\\right)\\left(x-1\\right)"
+    );
+    assert_eq!(sym("factor(x^4-1)"), "\\left(x-1\\right)\\left(x+1\\right)\\left(x^{2}+1\\right)");
+    assert_eq!(sym("factor(-x^2+1)"), "-\\left(x-1\\right)\\left(x+1\\right)");
+    assert_eq!(sym("factor(\\frac{1}{2}x^2-\\frac{1}{2})"), "\\frac{\\left(x-1\\right)\\left(x+1\\right)}{2}");
+}
+
+#[test]
+fn factor_leaves_irreducibles_alone() {
+    assert_eq!(sym("factor(x^2+1)"), "x^{2}+1");
+    assert_eq!(sym("factor(x^2-2)"), "x^{2}-2");
+    assert_eq!(sym("factor(x^3-2)"), "x^{3}-2");
+}
+
+#[test]
+fn factor_several_variables() {
+    assert_eq!(sym("factor(6x^2y+3xy)"), "3xy\\left(2x+1\\right)");
+    assert_eq!(sym("factor(ax+ay)"), "a\\left(x+y\\right)");
+}
+
+#[test]
+fn factor_treats_functions_as_variables() {
+    assert_eq!(
+        sym("factor(\\sin(x)^2-1)"),
+        "\\left(\\sin\\left(x\\right)-1\\right)\\left(\\sin\\left(x\\right)+1\\right)"
+    );
+    assert_eq!(sym("\\sin(x)^2"), "\\sin^{2}\\left(x\\right)");
+}
+
+#[test]
+fn factor_numbers_are_unchanged() {
+    assert_eq!(sym("factor(12)"), "12");
+    assert_eq!(sym("factor(x)"), "x");
+}
+
+/// Random products of linear factors: factoring their expansion must give a product
+/// whose printed LaTeX parses back and expands to the same polynomial.
+#[test]
+fn factor_round_trips_through_latex() {
+    let mut seed: u64 = 0x2545F4914F6CDD1D;
+    let mut rand = |m: u64| {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed % m
+    };
+    for _ in 0..300 {
+        let k = 2 + rand(4) as usize; // 2..5 factors
+        let factors: Vec<String> = (0..k)
+            .map(|_| {
+                let a = 1 + rand(4) as i64;
+                let b = rand(13) as i64 - 6;
+                format!("({a}x{b:+})")
+            })
+            .collect();
+        let product = factors.concat();
+        let expanded = sym(&format!("expand({product})"));
+        let factored = sym(&format!("factor({product})"));
+        assert!(factored.contains("\\left("), "{product}: not factored, got {factored}");
+        let back = sym(&format!("expand({factored})"));
+        assert_eq!(back, expanded, "{product} factored as {factored}");
     }
 }

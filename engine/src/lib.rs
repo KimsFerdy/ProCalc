@@ -9,6 +9,7 @@ mod eval;
 mod latex;
 mod number;
 mod parser;
+mod poly;
 mod sym;
 #[cfg(test)]
 mod tests_symbolic;

@@ -189,7 +189,8 @@ fn product(s: &Sym) -> String {
 
 /// Writes factors side by side: 2√3πx², merging same-index roots (√5·√x → √(5x)).
 fn juxtapose(mut factors: Vec<Sym>) -> String {
-    factors.sort_by_key(|f| (factor_rank(f), latex(f)));
+    // Bracketed factors in textbook order: (x−1)(x+1), (x−1)(2x+1).
+    factors.sort_by_key(|f| (factor_rank(f), degree(f), constant_term(f), latex(f)));
     // Merge roots of equal index into one radical.
     let mut roots: Vec<(u64, Vec<Sym>)> = Vec::new();
     let mut others: Vec<Sym> = Vec::new();
@@ -231,6 +232,15 @@ fn juxtapose(mut factors: Vec<Sym>) -> String {
     out
 }
 
+/// The plain-number term of a sum (or of a power of a sum), else 0.
+fn constant_term(s: &Sym) -> Q {
+    match s {
+        Sym::Add(t) => t.iter().find_map(|t| t.as_num().cloned()).unwrap_or_else(Q::zero),
+        Sym::Pow(b, _) => constant_term(b),
+        _ => Q::zero(),
+    }
+}
+
 fn has_const(s: &Sym) -> bool {
     match s {
         Sym::Const(_) => true,
@@ -243,7 +253,7 @@ fn has_const(s: &Sym) -> bool {
 
 fn ends_with_command(s: &str) -> bool {
     let letters = s.bytes().rev().take_while(u8::is_ascii_alphabetic).count();
-    letters > 0 && s.as_bytes().get(s.len() - letters - 1) == Some(&b'\\')
+    letters > 0 && s.len().checked_sub(letters + 1).is_some_and(|i| s.as_bytes()[i] == b'\\')
 }
 
 /// One factor inside a product, parenthesised when needed.
@@ -265,6 +275,11 @@ fn power(b: &Sym, e: &Sym) -> String {
             return if k == 2 { format!("\\sqrt{{{inner}}}") } else { format!("\\sqrt[{k}]{{{inner}}}") };
         }
     }
+    // sin²(x): a positive integer power of a named function goes on the name.
+    if let (Sym::Func(f, x), Some(k)) = (b, e.as_num())
+        && k.is_integer() && k.is_positive() && !matches!(f, Func::Abs | Func::Floor | Func::Ceil) {
+            return format!("{}^{{{}}}\\left({}\\right)", f.latex(), latex(e), latex(x));
+        }
     let base = match b {
         Sym::Num(v) if v.is_integer() && !v.is_negative() => latex(b),
         Sym::Const(_) | Sym::Var(_) => latex(b),

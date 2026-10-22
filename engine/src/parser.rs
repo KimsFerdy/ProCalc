@@ -2,7 +2,7 @@
 //! into an [`Expr`] tree.
 
 use crate::EngineError;
-use crate::ast::{BinOp, Const, Expr, Func};
+use crate::ast::{BinOp, Const, Expr, Func, SymOp};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Tok {
@@ -341,7 +341,7 @@ impl Parser {
                 continue;
             }
             let name = &letters[..len];
-            if name == "pi" || Func::from_name(name).is_some() {
+            if name == "pi" || Func::from_name(name).is_some() || SymOp::from_name(name).is_some() {
                 self.i = start + len;
                 return self.named(name, pos);
             }
@@ -400,6 +400,9 @@ impl Parser {
         }
         if let Some(f) = Func::from_name(name) {
             return self.call(f);
+        }
+        if let Some(op) = SymOp::from_name(name) {
+            return Ok(Expr::Op(op, Box::new(self.power()?)));
         }
         let var = if GREEK.contains(&name) {
             format!("\\{name}")
@@ -477,7 +480,9 @@ impl Parser {
                     f = inv;
                     power = None;
                 }
-        let arg = self.power()?;
+        // `\sin(x)^2` is (sin x)², while `\sin x^2` is sin(x²).
+        let bracketed = self.peek() == Some(&Tok::Sym('('));
+        let arg = if bracketed { self.primary()? } else { self.power()? };
         let mut e = match (f, base) {
             (Func::Log, Some(b)) => Expr::LogBase(Box::new(b), Box::new(arg)),
             (_, Some(_)) => return Err(EngineError::at("Only log takes a subscript base", self.pos())),
@@ -485,6 +490,12 @@ impl Parser {
         };
         if let Some(p) = power {
             e = Expr::Pow(Box::new(e), Box::new(p));
+        }
+        if bracketed && self.eat_sym('^') {
+            match self.exponent()? {
+                Exponent::Value(p) => e = Expr::Pow(Box::new(e), Box::new(p)),
+                Exponent::Degree => return Err(EngineError::at("Unexpected degree sign", self.pos())),
+            }
         }
         Ok(e)
     }
@@ -572,11 +583,23 @@ mod tests {
             "30^{\\circ}",
             "2\\pi",
             "\\operatorname{abs}(-2)",
+            "\\operatorname{expand}\\left((x+1)^{2}\\right)",
+            "factor(x^2-1)",
             "\\exponentialE^{2}",
             "1\\,000\\,000",
         ] {
             assert!(parse(s).is_ok(), "failed: {s}: {:?}", parse(s));
         }
+    }
+
+    #[test]
+    fn function_power_binds_outside_brackets() {
+        let sin_x = Expr::Call(Func::Sin, Box::new(Expr::Var("x".into())));
+        let two = Box::new(Expr::Number("2".into()));
+        assert_eq!(parse("\\sin(x)^2").unwrap(), Expr::Pow(Box::new(sin_x.clone()), two.clone()));
+        assert_eq!(parse("\\sin^{2}x").unwrap(), Expr::Pow(Box::new(sin_x), two.clone()));
+        let x2 = Expr::Pow(Box::new(Expr::Var("x".into())), two);
+        assert_eq!(parse("\\sin x^2").unwrap(), Expr::Call(Func::Sin, Box::new(x2)));
     }
 
     #[test]

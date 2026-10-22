@@ -16,7 +16,7 @@ use num_integer::Integer;
 use num_rational::BigRational as Q;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
-use crate::ast::{BinOp, Const, Expr, Func};
+use crate::ast::{BinOp, Const, Expr, Func, SymOp};
 use crate::eval::{self, Evaluator};
 use crate::number::{self, Value, int};
 use crate::{AngleMode, EngineError};
@@ -486,6 +486,13 @@ impl Builder<'_> {
             Expr::Percent(x) => {
                 let x = self.build(x)?;
                 mul(vec![x, q(1, 100)])
+            }
+            Expr::Op(op, x) => {
+                let x = self.build(x)?;
+                match op {
+                    SymOp::Expand => crate::poly::expand(&x)?,
+                    SymOp::Factor => crate::poly::factor(&x)?,
+                }
             }
             Expr::Call(f, x) => {
                 let trig = matches!(f, Func::Sin | Func::Cos | Func::Tan);

@@ -66,6 +66,8 @@ impl Evaluator {
                 let x = self.eval(x)?;
                 self.factorial(x, *step)
             }
+            // Rewriting never changes the value.
+            Expr::Op(_, x) => self.eval(x),
             Expr::Percent(x) => {
                 let x = self.eval(x)?;
                 self.binary(BinOp::Div, x, Value::Exact(int(100)))

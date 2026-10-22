@@ -1,0 +1,69 @@
+:root {
+  --bg: #0d1015;
+  --panel: #151a21;
+  --panel-2: #1b222b;
+  --line: #262e39;
+  --ink: #e8edf2;
+  --muted: #8a96a6;
+  --accent: #6fe3c1;
+  --accent-ink: #062a20;
+  --accent-2: #a3b1ff;
+  --err: #ff8a80;
+  --radius: 14px;
+  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #eef1f5;
+    --line: #dde2e9;
+    --ink: #14181f;
+    --muted: #5d6877;
+    --accent: #0f9e78;
+    --accent-ink: #ffffff;
+    --accent-2: #4b5fd6;
+    --err: #c62828;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+math-field {
+  --caret-color: var(--accent);
+  --selection-background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  --contains-highlight-background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  --placeholder-color: var(--muted);
+  --primary-color: var(--accent);
+  --text-font-family: var(--font-ui);
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  outline: none;
+}
+
+math-field::part(menu-toggle) {
+  display: none;
+}

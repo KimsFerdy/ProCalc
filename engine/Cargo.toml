@@ -1,0 +1,16 @@
+[package]
+name = "procalc-engine"
+version = "0.1.0"
+description = "ProCalc's maths engine: parsing, exact and arbitrary-precision evaluation"
+authors = ["kimsferdinand"]
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+astro-float = "0.9"
+num-bigint = "0.4"
+num-integer = "0.1"
+num-rational = { version = "0.4", features = ["num-bigint"] }
+num-traits = "0.2"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

@@ -1,0 +1,19 @@
+[workspace]
+members = ["src-tauri", "engine"]
+resolver = "3"
+
+# Big-number maths is painfully slow unoptimised, so optimise the engine and all
+# dependencies even in dev builds. Only the thin Tauri app crate stays at -O0.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev.package.procalc-engine]
+opt-level = 3
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

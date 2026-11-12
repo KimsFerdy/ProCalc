@@ -171,7 +171,13 @@ function describe(e: unknown): string {
 export function whatsNew(body: string | undefined): string {
   if (!body) return "";
   const m = body.match(/##\s*What's new\s*\n([\s\S]*?)(?=\n##\s|$)/i);
-  return m ? m[1].trim() : "";
+  if (!m) return "";
+  // Shown as plain text: drop Markdown emphasis and code marks, keep bullets as •.
+  return m[1]
+    .trim()
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^\s*[-*]\s+/gm, "• ");
 }
 
 export function formatBytes(n: number): string {

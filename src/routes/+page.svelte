@@ -6,6 +6,14 @@
   import { ask } from "@tauri-apps/plugin-dialog";
   import UpdateDialog from "$lib/UpdateDialog.svelte";
   import { formatBytes, updates } from "$lib/updates.svelte";
+  import { colorBracketsInMarkup } from "$lib/brackets";
+  import { theme, type ThemeChoice } from "$lib/theme.svelte";
+
+  const THEMES: { id: ThemeChoice; name: string }[] = [
+    { id: "system", name: "System" },
+    { id: "light", name: "Light" },
+    { id: "dark", name: "Dark" },
+  ];
   import {
     chooseOpenPath,
     chooseSavePath,
@@ -144,8 +152,9 @@
     })();
   });
 
+  /** Maths as markup, with its brackets colour-coded by nesting level. */
   function render(latex: string) {
-    return toMarkup(latex);
+    return colorBracketsInMarkup(toMarkup(latex));
   }
 
   /** Definition lines in history, oldest first: Expand/Factor on an entry can use them. */
@@ -548,6 +557,17 @@
       </div>
       <div class="setting">
         <div class="setting-text">
+          <span class="setting-name">Theme</span>
+          <span class="setting-help">Light, dark, or follow your system</span>
+        </div>
+        <div class="seg" role="group" aria-label="Theme">
+          {#each THEMES as t}
+            <button class:on={theme.choice === t.id} onclick={() => theme.set(t.id)}>{t.name}</button>
+          {/each}
+        </div>
+      </div>
+      <div class="setting">
+        <div class="setting-text">
           <span class="setting-name">Angles</span>
           <span class="setting-help">How sin, cos and tan read their angles, and how angles are shown</span>
         </div>
@@ -821,8 +841,8 @@
     display: flex;
     flex-direction: column;
     background: var(--panel);
-    border-left: 1px solid var(--line);
-    box-shadow: -12px 0 32px rgb(0 0 0 / 0.25);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    box-shadow: var(--shadow);
     transform: translateX(105%);
     transition: transform 180ms ease;
     z-index: 5;
@@ -866,8 +886,8 @@
   }
 
   .ghost.on {
-    color: var(--ink);
-    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
   }
 
   header {
@@ -875,8 +895,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--line);
+    padding: 14px 20px 8px;
   }
 
   .brand-wrap,
@@ -902,7 +921,7 @@
   }
 
   .dirty {
-    color: var(--accent);
+    color: var(--accent-strong);
     font-size: 9px;
   }
 
@@ -912,11 +931,10 @@
     left: 0;
     z-index: 10;
     width: 280px;
-    padding: 6px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    padding: 8px;
+    border-radius: var(--radius);
     background: var(--panel);
-    box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+    box-shadow: var(--shadow);
     animation: menu-in 140ms ease-out;
   }
 
@@ -1063,7 +1081,7 @@
   }
 
   .switch input:focus-visible + .track {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-strong);
     outline-offset: 2px;
   }
 
@@ -1082,11 +1100,12 @@
     left: 50%;
     z-index: 20;
     max-width: min(520px, 90vw);
-    padding: 10px 16px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--panel);
-    box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+    box-shadow: var(--shadow);
     transform: translateX(-50%);
     animation: menu-in 160ms ease-out;
   }
@@ -1095,34 +1114,42 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 10px 4px 4px;
-    border: 1px solid transparent;
-    border-radius: 12px;
+    padding: 5px 12px 5px 5px;
+    border: none;
+    border-radius: 999px;
     background: transparent;
     color: inherit;
     font: inherit;
-    font-weight: 650;
-    letter-spacing: 0.2px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease;
+    transition: background 120ms ease;
   }
 
   .brand:hover,
   .brand[aria-expanded="true"] {
-    background: var(--panel-2);
-    border-color: var(--line);
+    background: var(--panel);
   }
 
   .mode-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
-    font-size: 12px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 13px;
     font-weight: 600;
+  }
+
+  .mode-chip::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
   }
 
   .caret {
@@ -1146,11 +1173,10 @@
     left: 0;
     z-index: 10;
     width: 300px;
-    padding: 6px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    padding: 8px;
+    border-radius: var(--radius);
     background: var(--panel);
-    box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+    box-shadow: var(--shadow);
     animation: menu-in 140ms ease-out;
     transform-origin: top left;
   }
@@ -1169,7 +1195,7 @@
     width: 100%;
     padding: 9px 10px;
     border: 0;
-    border-radius: 10px;
+    border-radius: 14px;
     background: transparent;
     color: inherit;
     font: inherit;
@@ -1190,9 +1216,9 @@
     display: grid;
     place-items: center;
     flex: none;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     background: var(--panel-2);
     font-size: 17px;
   }
@@ -1220,14 +1246,14 @@
   }
 
   .mode-check {
-    color: var(--accent);
+    color: var(--accent-strong);
     font-weight: 700;
   }
 
   .soon {
-    padding: 2px 7px;
-    border: 1px solid var(--line);
+    padding: 3px 8px;
     border-radius: 999px;
+    background: var(--panel-2);
     color: var(--muted);
     font-size: 10.5px;
     letter-spacing: 0.3px;
@@ -1237,9 +1263,9 @@
   .logo {
     display: grid;
     place-items: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     background: var(--accent);
     color: var(--accent-ink);
     font-size: 18px;
@@ -1251,61 +1277,85 @@
     gap: 10px;
   }
 
+  /* Pill switch, like Month | Year. */
   .seg {
     display: flex;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
+    background: var(--panel);
     border-radius: 999px;
-    padding: 2px;
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .tips .seg {
+    background: var(--panel-2);
   }
 
   .seg button {
     border: none;
     background: none;
-    padding: 4px 12px;
+    padding: 5px 13px;
     border-radius: 999px;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.3px;
     color: var(--muted);
     cursor: pointer;
+    transition: background 140ms, color 140ms;
+  }
+
+  .seg button:hover:not(.on) {
+    color: var(--ink);
   }
 
   .seg button.on {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--ink);
+    color: var(--bg);
   }
 
   .digits {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12.5px;
+    padding: 4px 4px 4px 14px;
+    border-radius: 999px;
+    background: var(--panel);
+    font-size: 13px;
+    font-weight: 600;
     color: var(--muted);
   }
 
-  .digits select {
+  .digits select,
+  .setting select {
     background: var(--panel-2);
     color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 4px 6px;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 10px;
     font: inherit;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   .ghost {
-    background: none;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 12.5px;
+    background: var(--panel);
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--muted);
     cursor: pointer;
+    transition: background 140ms, color 140ms;
   }
 
   .ghost:hover {
     color: var(--ink);
-    border-color: var(--muted);
+    background: var(--panel-2);
+  }
+
+  .tips .ghost,
+  .drawer .ghost {
+    background: var(--panel-2);
   }
 
   .ghost.small {
@@ -1331,24 +1381,26 @@
   }
 
   .info {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 1px solid var(--line);
-    background: none;
+    border: none;
+    background: var(--panel);
     color: var(--muted);
     font-size: 16px;
     cursor: pointer;
+    transition: background 140ms, color 140ms;
   }
 
   .info:hover {
     color: var(--ink);
-    border-color: var(--muted);
+    background: var(--panel-2);
   }
 
   .tips {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
     background: var(--panel);
     color: var(--ink);
     padding: 0;
@@ -1361,7 +1413,7 @@
   }
 
   .tips-body {
-    padding: 16px 20px 18px;
+    padding: 20px 24px 22px;
     line-height: 1.7;
     color: var(--muted);
   }
@@ -1403,7 +1455,7 @@
   }
 
   .entry.definition {
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--accent-strong);
   }
 
   .tag {
@@ -1453,7 +1505,7 @@
 
   .value.decimal {
     font-size: 18px;
-    color: var(--accent);
+    color: var(--accent-strong);
   }
 
   .rel {

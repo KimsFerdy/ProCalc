@@ -12,6 +12,8 @@
   import Graph, { type Series } from "$lib/Graph.svelte";
   import type { PaperState } from "$lib/project";
   import { SLOTS, slotColor } from "$lib/palette";
+  import { watchFieldBrackets } from "$lib/brackets";
+  import { workedRows } from "$lib/worked";
 
   interface Line {
     id: number;
@@ -377,8 +379,10 @@
     f.addEventListener("input", onInput);
     f.addEventListener("keydown", onKey, { capture: true });
     f.addEventListener("move-out", onMoveOut);
+    const stopBrackets = watchFieldBrackets(f);
     return {
       destroy() {
+        stopBrackets();
         fields.delete(line.id);
         f.removeEventListener("input", onInput);
         f.removeEventListener("keydown", onKey, { capture: true });
@@ -445,7 +449,7 @@
     <span class="title">Paper</span>
     <div class="seg" role="group" aria-label="Answer style">
       <button class:on={!showSteps} onclick={() => setShowSteps(false)}>Answer</button>
-      <button class:on={showSteps} onclick={() => setShowSteps(true)} title="Show the working: equations, derivatives, integrals, substitutions">Steps</button>
+      <button class:on={showSteps} onclick={() => setShowSteps(true)} title="Open the working under every line, not just the one you're on">Steps</button>
     </div>
     <div class="spacer"></div>
     <button class="ghost" class:on={showGraph} onclick={toggleGraph} title="Plot every function of one letter on the Paper">Graph</button>
@@ -501,35 +505,63 @@
               {/if}
               <button class="pin" onclick={() => pin(line)} title="Pin to history (Ctrl+Enter)" aria-label="Pin to history">📌</button>
             {:else if r && line.src.trim()}
-              <span class="error" title={r.error.message}>{line.id === activeId ? r.error.message : "!"}</span>
+              <span class="error" title={r.error.message}>!</span>
             {/if}
           </div>
-          {#if showSteps && r?.ok && r.answer.methods?.length}
-            {@const methods = r.answer.methods}
-            {@const pick = Math.min(chosenMethod[line.id] ?? 0, methods.length - 1)}
-            <div class="steps">
-              {#if methods.length > 1}
-                <div class="methods" role="tablist" aria-label="Method">
-                  {#each methods as meth, k}
-                    <button
-                      role="tab"
-                      aria-selected={k === pick}
-                      class:on={k === pick}
-                      onclick={() => (chosenMethod[line.id] = k)}>{meth.name}</button
-                    >
+          {#if (line.id === activeId || showSteps) && r?.ok}
+            <!-- The worked view: the working as a chain, then the final answer, large. -->
+            {@const a = r.answer}
+            {@const methods = a.methods ?? []}
+            {@const pick = Math.min(chosenMethod[line.id] ?? 0, Math.max(0, methods.length - 1))}
+            <div class="worked">
+              {#if methods.length}
+                {#if methods.length > 1}
+                  <div class="methods" role="tablist" aria-label="Method">
+                    {#each methods as meth, k}
+                      <button
+                        role="tab"
+                        aria-selected={k === pick}
+                        class:on={k === pick}
+                        onclick={() => (chosenMethod[line.id] = k)}>{meth.name}</button
+                      >
+                    {/each}
+                  </div>
+                {:else}
+                  <div class="method-name">{methods[0].name}</div>
+                {/if}
+                <div class="chain">
+                  {#each workedRows(methods[pick].steps) as row}
+                    {#if row.note}
+                      <div class="chain-note" class:aside={row.aside}>{@html noteHtml(row.note)}</div>
+                    {/if}
+                    {#if row.latex}
+                      <div class="chain-row" class:cont={row.rel === "="} class:aside={row.aside}>
+                        <span class="chain-rel">{row.rel}</span>
+                        <span class="chain-math">{@html render(`\\displaystyle ${row.latex}`)}</span>
+                      </div>
+                    {/if}
                   {/each}
                 </div>
-              {:else}
-                <div class="method-name">{methods[0].name}</div>
               {/if}
-              <ol>
-                {#each methods[pick].steps as s}
-                  <li>
-                    {#if s.latex}<div class="step-math">{@html render(s.latex)}</div>{/if}
-                    {#if s.note}<div class="step-note">{@html noteHtml(s.note)}</div>{/if}
-                  </li>
-                {/each}
-              </ol>
+              {#if a.exact_latex || a.decimal}
+                <div class="final" aria-label="Answer">
+                  {#if a.exact_latex}
+                    <div class="final-exact">
+                      <span class="final-rel">{a.defines ? "≔" : "="}</span>
+                      <span class="final-math">{@html render(`\\displaystyle ${a.exact_latex}`)}</span>
+                    </div>
+                  {/if}
+                  {#if showDecimal(a)}
+                    <div class="final-decimal">
+                      <span class="final-rel">{rel(a)}</span>{@html render(a.decimal!.latex)}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {:else if line.id === activeId && r && !r.ok && line.src.trim()}
+            <div class="worked">
+              <div class="final error-card" role="alert">{r.error.message}</div>
             </div>
           {/if}
         {:else}
@@ -562,46 +594,52 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px 6px;
+    padding: 12px 20px 8px;
     width: 100%;
-    max-width: 920px;
+    max-width: 960px;
     margin: 0 auto;
   }
 
   .title {
-    font-weight: 650;
-    font-size: 13px;
-    letter-spacing: 0.4px;
-    color: var(--muted);
-    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: -0.2px;
+    color: var(--ink);
+    margin-right: 6px;
   }
 
   .spacer {
     flex: 1;
   }
 
+  /* Pill switch, like Month | Year. */
   .seg {
     display: flex;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
+    background: var(--panel);
     border-radius: 999px;
-    padding: 2px;
+    padding: 4px;
+    gap: 2px;
   }
 
   .seg button {
     border: none;
     background: none;
-    padding: 2px 10px;
+    padding: 5px 14px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
+    transition: background 140ms, color 140ms;
+  }
+
+  .seg button:hover:not(.on) {
+    color: var(--ink);
   }
 
   .seg button.on {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--ink);
+    color: var(--bg);
   }
 
   .seg button:disabled {
@@ -610,44 +648,61 @@
   }
 
   .ghost {
-    background: none;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 3px 9px;
-    font-size: 12.5px;
+    background: var(--panel);
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
     color: var(--muted);
     cursor: pointer;
+    transition: background 140ms, color 140ms;
   }
 
   .ghost:hover {
     color: var(--ink);
-    border-color: var(--muted);
+    background: var(--panel-2);
   }
 
+  .ghost.on {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
 
   .sheet {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 4px 16px 16px;
+    padding: 6px 20px 28px;
     width: 100%;
-    max-width: 920px;
+    max-width: 960px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .line {
     display: grid;
     grid-template-columns: 30px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
-    padding: 4px 6px;
-    border-radius: 10px;
-    border: 1px solid transparent;
+    gap: 6px 12px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    transition: background 160ms;
   }
 
+  .line:hover:not(.active) {
+    background: color-mix(in srgb, var(--panel) 55%, transparent);
+  }
+
+  /* The line you're on becomes a card and opens its working. */
   .line.active {
-    background: var(--panel-2);
-    border-color: var(--line);
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 12px 16px 16px;
+    margin: 6px 0;
+    box-shadow: var(--shadow);
   }
 
   .line.note {
@@ -658,36 +713,38 @@
     background: none;
     border: none;
     color: var(--muted);
-    font-size: 12px;
-    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 0.75;
     padding: 0;
+    height: 26px;
+    border-radius: 999px;
   }
 
   .kind:hover {
-    color: var(--accent);
+    color: var(--accent-strong);
     opacity: 1;
   }
 
-  /* A plotted line wears its curve's colour beside its number. */
+  .line.active .kind {
+    background: var(--panel-2);
+    color: var(--ink);
+    opacity: 1;
+  }
+
+  /* A plotted line wears its curve's colour as a dot beside its number. */
   .kind.plotted {
     opacity: 1;
     color: var(--ink);
-    border-left: 3px solid var(--chip);
-    padding-left: 4px;
-  }
-
-  .ghost.on {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
+    box-shadow: inset 0 0 0 2px var(--chip);
   }
 
   .graph-wrap {
     flex: 0 0 58%;
     min-height: 180px;
-    padding: 0 16px 4px;
+    padding: 0 20px 4px;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -695,7 +752,7 @@
 
   .split {
     flex: none;
-    height: 10px;
+    height: 12px;
     cursor: ns-resize;
     touch-action: none;
     position: relative;
@@ -705,10 +762,10 @@
     content: "";
     position: absolute;
     left: 50%;
-    top: 3px;
-    width: 44px;
+    top: 4px;
+    width: 48px;
     height: 4px;
-    margin-left: -22px;
+    margin-left: -24px;
     border-radius: 2px;
     background: var(--line);
   }
@@ -736,6 +793,7 @@
     line-height: 1.5;
   }
 
+  /* The short answer beside the line. */
   .answer {
     display: flex;
     align-items: baseline;
@@ -743,6 +801,7 @@
     justify-content: flex-end;
     max-width: 50vw;
     overflow-x: auto;
+    overflow-y: hidden;
     font-size: 19px;
   }
 
@@ -754,7 +813,7 @@
   }
 
   .value.decimal {
-    color: var(--accent);
+    color: var(--accent-strong);
     font-size: 16px;
   }
 
@@ -783,77 +842,176 @@
   }
 
   .error {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--err) 18%, transparent);
     color: var(--err);
     font-size: 13px;
-    white-space: nowrap;
+    font-weight: 700;
   }
 
-  .steps {
+  /* ---------- The worked view ---------- */
+
+  .worked {
     grid-column: 2 / -1;
-    margin: 4px 0 8px;
-    padding: 10px 12px;
-    border-left: 2px solid var(--accent);
-    background: color-mix(in srgb, var(--accent) 5%, transparent);
-    border-radius: 0 10px 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 6px;
+    animation: open 180ms ease-out;
+  }
+
+  @keyframes open {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   .methods {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 4px;
+    align-self: flex-start;
+    background: var(--panel-2);
+    border-radius: 999px;
+    padding: 4px;
   }
 
   .methods button {
-    background: var(--panel-2);
-    border: 1px solid var(--line);
+    background: none;
+    border: none;
     border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 12px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--muted);
     cursor: pointer;
   }
 
+  .methods button:hover:not(.on) {
+    color: var(--ink);
+  }
+
   .methods button.on {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
+    background: var(--ink);
+    color: var(--bg);
   }
 
   .method-name {
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 6px;
+    letter-spacing: 0.6px;
   }
 
-  .steps ol {
-    margin: 0;
-    padding-left: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .steps li::marker {
-    color: var(--muted);
-    font-size: 12px;
-  }
-
-  .step-math {
-    font-size: 18px;
+  /* Rows of working, each "= …" under the one before, like on paper. */
+  .chain {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 2px;
     overflow-x: auto;
+    padding: 2px 0 4px;
   }
 
-  .step-note {
-    font-size: 13px;
+  .chain-note {
+    grid-column: 2;
+    margin-top: 8px;
+    font-size: 12.5px;
     color: var(--muted);
     line-height: 1.5;
   }
 
+  .chain-note :global(.ML__latex) {
+    font-size: 0.95em;
+  }
+
+  .chain-row {
+    display: contents;
+  }
+
+  .chain-rel {
+    grid-column: 1;
+    align-self: center;
+    text-align: center;
+    font-size: 20px;
+    color: var(--muted);
+  }
+
+  .chain-math {
+    grid-column: 2;
+    font-size: 21px;
+    padding: 3px 0;
+    white-space: nowrap;
+  }
+
+  /* A side calculation inside a chain: indented and quieter, so the chain reads past it. */
+  .chain-note.aside {
+    padding-left: 22px;
+  }
+
+  .chain-row.aside .chain-math {
+    margin-left: 14px;
+    padding: 2px 0 2px 10px;
+    border-left: 2px solid var(--line);
+    font-size: 17px;
+    color: var(--muted);
+  }
+
+  /* The final answer, large, in its own card. */
+  .final {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    background: var(--panel-2);
+    overflow-x: auto;
+  }
+
+  .final-exact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .final-decimal {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 18px;
+    color: var(--accent-strong);
+    white-space: nowrap;
+  }
+
+  .final-rel {
+    color: var(--muted);
+    font-size: 0.75em;
+    font-weight: 400;
+  }
+
+  .error-card {
+    background: color-mix(in srgb, var(--err) 12%, var(--panel));
+    color: var(--err);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+
   @media (max-width: 560px) {
+    .bar,
+    .sheet {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
     .input {
       font-size: 19px;
     }
@@ -864,6 +1022,12 @@
     }
     .line {
       grid-template-columns: 22px minmax(0, 1fr);
+    }
+    .final-exact {
+      font-size: 27px;
+    }
+    .chain-math {
+      font-size: 18px;
     }
   }
 </style>

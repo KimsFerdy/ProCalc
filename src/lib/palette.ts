@@ -1,3 +1,5 @@
+import { theme } from "$lib/theme.svelte";
+
 /**
  * Curve colours: a validated categorical palette (colour-blind safe on adjacent slots,
  * checked against ProCalc's panel colours in both themes). Slots are handed out in this
@@ -9,8 +11,9 @@ const DARK = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", 
 
 export const SLOTS = LIGHT.length;
 
+/** Whether the dark theme is showing (the user's choice, or the system's). */
 export function prefersDark(): boolean {
-  return typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches;
+  return theme.dark;
 }
 
 export function slotColor(slot: number, dark = prefersDark()): string {

@@ -105,8 +105,9 @@
 
 <style>
   .update {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
     background: var(--panel);
     color: var(--ink);
     padding: 0;
@@ -177,7 +178,7 @@
     background: none;
     border: none;
     padding: 0;
-    color: var(--accent);
+    color: var(--accent-strong);
     font: inherit;
     font-size: 13px;
     cursor: pointer;

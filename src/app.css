@@ -1,34 +1,87 @@
+/*
+ * ProCalc's two themes. Dark is charcoal with soft, rounded cards and a lime highlight;
+ * light is the same layout on warm white. data-theme on <html> forces one; without it the
+ * system's choice wins.
+ *
+ *   --accent         lime fill for buttons, badges and the active pill (with --accent-ink on it)
+ *   --accent-strong  the highlight as a line or text colour (lime on dark, deep olive on light)
+ *   --br-0…5         bracket colours, one per nesting level
+ */
 :root {
-  --bg: #0d1015;
-  --panel: #151a21;
-  --panel-2: #1b222b;
-  --line: #262e39;
-  --ink: #e8edf2;
-  --muted: #8a96a6;
-  --accent: #6fe3c1;
-  --accent-ink: #062a20;
-  --accent-2: #a3b1ff;
-  --err: #ff8a80;
-  --radius: 14px;
-  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+  --bg: #1e1e1e;
+  --panel: #2a2a2a;
+  --panel-2: #333333;
+  --line: #3b3b3b;
+  --ink: #ededed;
+  --muted: #8e8e8e;
+  --accent: #d4f55c;
+  --accent-ink: #1b1f0b;
+  --accent-strong: #d4f55c;
+  --accent-2: #8ecdf5;
+  --err: #ff7a7a;
+  --shadow: 0 18px 44px rgb(0 0 0 / 0.38);
+
+  --br-0: #8ecdf5;
+  --br-1: #ff8a7a;
+  --br-2: #6fbf7e;
+  --br-3: #ffb357;
+  --br-4: #8f93ff;
+  --br-5: #d4f55c;
+
+  --radius: 22px;
+  --radius-sm: 12px;
+  --radius-lg: 28px;
+  --font-ui: "SF Pro Rounded", "Nunito", "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f6f7f9;
+  :root:not([data-theme="dark"]) {
+    --bg: #f1f1ee;
     --panel: #ffffff;
-    --panel-2: #eef1f5;
-    --line: #dde2e9;
-    --ink: #14181f;
-    --muted: #5d6877;
-    --accent: #0f9e78;
-    --accent-ink: #ffffff;
-    --accent-2: #4b5fd6;
-    --err: #c62828;
+    --panel-2: #f5f5f2;
+    --line: #e2e2dd;
+    --ink: #1c1c1e;
+    --muted: #727277;
+    --accent: #d4f55c;
+    --accent-ink: #1b1f0b;
+    --accent-strong: #5a7a00;
+    --accent-2: #2a86c8;
+    --err: #d23a3a;
+    --shadow: 0 18px 44px rgb(40 40 30 / 0.14);
+
+    --br-0: #1f7fc4;
+    --br-1: #d4483a;
+    --br-2: #2d8a45;
+    --br-3: #c76f00;
+    --br-4: #5056dc;
+    --br-5: #6a8a00;
     color-scheme: light;
   }
+}
+
+:root[data-theme="light"] {
+  --bg: #f1f1ee;
+  --panel: #ffffff;
+  --panel-2: #f5f5f2;
+  --line: #e2e2dd;
+  --ink: #1c1c1e;
+  --muted: #727277;
+  --accent: #d4f55c;
+  --accent-ink: #1b1f0b;
+  --accent-strong: #5a7a00;
+  --accent-2: #2a86c8;
+  --err: #d23a3a;
+  --shadow: 0 18px 44px rgb(40 40 30 / 0.14);
+
+  --br-0: #1f7fc4;
+  --br-1: #d4483a;
+  --br-2: #2d8a45;
+  --br-3: #c76f00;
+  --br-4: #5056dc;
+  --br-5: #6a8a00;
+  color-scheme: light;
 }
 
 * {
@@ -44,6 +97,7 @@ body {
   font-family: var(--font-ui);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 200ms ease;
 }
 
 button {
@@ -51,12 +105,16 @@ button {
   color: inherit;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
 math-field {
-  --caret-color: var(--accent);
-  --selection-background-color: color-mix(in srgb, var(--accent) 30%, transparent);
-  --contains-highlight-background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  --caret-color: var(--accent-strong);
+  --selection-background-color: color-mix(in srgb, var(--accent-strong) 28%, transparent);
+  --contains-highlight-background-color: color-mix(in srgb, var(--accent-strong) 10%, transparent);
   --placeholder-color: var(--muted);
-  --primary-color: var(--accent);
+  --primary-color: var(--accent-strong);
   --text-font-family: var(--font-ui);
   background: transparent;
   color: var(--ink);
@@ -66,4 +124,10 @@ math-field {
 
 math-field::part(menu-toggle) {
   display: none;
+}
+
+/* Thin, quiet scrollbars that match the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }

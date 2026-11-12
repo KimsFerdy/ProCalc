@@ -35,7 +35,8 @@
   let box = $state<HTMLDivElement | undefined>();
   let width = $state(600);
   let height = $state(260);
-  let dark = $state(false);
+  /** The theme in use: curve colours and the canvas follow it. */
+  const dark = $derived(prefersDark());
   let hidden = $state<Set<number>>(new Set());
   let hover = $state<{ px: number; py: number } | null>(null);
   /** 3D view of surfaces: rotation (radians) and zoom. */
@@ -116,10 +117,6 @@
   const PAD = { left: 44, right: 34, top: 10, bottom: 24 };
 
   onMount(() => {
-    dark = prefersDark();
-    const mq = matchMedia("(prefers-color-scheme: dark)");
-    const onScheme = () => (dark = mq.matches);
-    mq.addEventListener("change", onScheme);
     const ro = new ResizeObserver(([e]) => {
       width = Math.max(200, Math.round(e.contentRect.width));
       height = Math.max(140, Math.round(e.contentRect.height));
@@ -128,7 +125,6 @@
     if (box) ro.observe(box);
     return () => {
       ro.disconnect();
-      mq.removeEventListener("change", onScheme);
     };
   });
 
@@ -991,8 +987,8 @@
 
   .tools > button.on {
     color: var(--ink);
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: var(--accent-strong);
+    background: color-mix(in srgb, var(--accent-strong) 14%, transparent);
   }
 
   .seg {

@@ -706,8 +706,8 @@
   }
 
   .tool.on {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+    border-color: var(--accent-strong);
+    background: color-mix(in srgb, var(--accent-strong) 14%, var(--panel));
   }
 
   .tool-icon {
@@ -752,20 +752,20 @@
   }
 
   .shape {
-    fill: color-mix(in srgb, var(--accent) 8%, transparent);
+    fill: color-mix(in srgb, var(--accent-strong) 8%, transparent);
     stroke: var(--muted);
     stroke-width: 2;
     stroke-dasharray: 6 4;
   }
 
   .shape.solved {
-    stroke: var(--accent);
+    stroke: var(--accent-strong);
     stroke-dasharray: none;
   }
 
   .draft {
     fill: none;
-    stroke: var(--accent);
+    stroke: var(--accent-strong);
     stroke-width: 1.5;
     stroke-dasharray: 4 4;
   }
@@ -782,7 +782,7 @@
 
   .handle {
     fill: var(--panel);
-    stroke: var(--accent);
+    stroke: var(--accent-strong);
     stroke-width: 2;
   }
 
@@ -816,7 +816,7 @@
   }
 
   text.given {
-    fill: var(--accent);
+    fill: var(--accent-strong);
     font-weight: 650;
   }
 
@@ -854,7 +854,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-strong);
     border-radius: 10px;
     background: var(--panel);
     box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
@@ -900,7 +900,7 @@
   }
 
   .status.ok {
-    color: var(--accent);
+    color: var(--accent-strong);
   }
 
   .status.warn {
@@ -968,8 +968,8 @@
   }
 
   .chip.given {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--accent-strong);
+    color: var(--accent-strong);
   }
 
   .chip.found {
@@ -995,15 +995,15 @@
   }
 
   .want.on {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: var(--accent-strong);
+    background: color-mix(in srgb, var(--accent-strong) 14%, transparent);
   }
 
   .card {
     margin-top: 10px;
     padding: 10px 12px;
     border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--accent-strong);
     border-radius: 10px;
   }
 

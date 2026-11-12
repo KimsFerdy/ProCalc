@@ -1,0 +1,16 @@
+{
+  // F5: start the UI dev server, build the app, and run it under the Visual Studio debugger,
+  // so breakpoints in engine/ and src-tauri/ stop. Needs the C/C++ extension (ms-vscode.cpptools).
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug ProCalc (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/procalc.exe",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "debug: prepare",
+      "console": "integratedTerminal"
+    }
+  ]
+}

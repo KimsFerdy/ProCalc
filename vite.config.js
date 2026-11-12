@@ -25,8 +25,10 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell Vite to ignore the Rust side: `src-tauri`, the engine, and the Cargo
+      //    workspace's `target` (on Windows its files are locked mid-build, which floods
+      //    the console with EBUSY errors)
+      ignored: ["**/src-tauri/**", "**/engine/**", "**/target/**", "**/stress/**"],
     },
   },
 }));

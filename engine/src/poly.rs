@@ -21,6 +21,8 @@ use crate::sym::{SR, Sym, add, mul, n, pow};
 
 /// Upper bound on terms produced by a single expansion.
 const MAX_TERMS: usize = 5_000;
+/// Upper bound on products formed in one distribution step, before like terms merge.
+const MAX_PRODUCTS: usize = 100_000;
 /// Largest degree we try to factor.
 const MAX_FACTOR_DEGREE: usize = 200;
 /// Integers above this aren't trial-factored for rational-root candidates.
@@ -41,7 +43,7 @@ fn terms_of(s: Sym) -> Vec<Sym> {
 
 /// Multiplies two sums term by term.
 fn distribute(a: Vec<Sym>, b: &[Sym]) -> Result<Vec<Sym>, EngineError> {
-    if a.len().saturating_mul(b.len()) > MAX_TERMS {
+    if a.len().saturating_mul(b.len()) > MAX_PRODUCTS {
         return Err(too_big());
     }
     let mut out = Vec::with_capacity(a.len() * b.len());
@@ -50,12 +52,28 @@ fn distribute(a: Vec<Sym>, b: &[Sym]) -> Result<Vec<Sym>, EngineError> {
             out.push(mul(vec![x.clone(), y.clone()]));
         }
     }
-    Ok(terms_of(add(out)))
+    let terms = terms_of(add(out));
+    if terms.len() > MAX_TERMS {
+        return Err(too_big());
+    }
+    Ok(terms)
+}
+
+/// Terms in (t terms)^k fully expanded, at most: C(k+t−1, t−1). Saturates past `MAX_TERMS`.
+fn power_terms(t: usize, k: u32) -> usize {
+    let mut c: u128 = 1;
+    for i in 1..t as u128 {
+        c = c * (k as u128 + i) / i;
+        if c > MAX_TERMS as u128 {
+            return MAX_TERMS + 1;
+        }
+    }
+    c as usize
 }
 
 pub fn expand(s: &Sym) -> SR {
     Ok(match s {
-        Sym::Num(_) | Sym::Const(_) | Sym::Var(_) => s.clone(),
+        Sym::Num(_) | Sym::Const(_) | Sym::Var(_) | Sym::Unit(_) => s.clone(),
         Sym::Add(t) => add(t.iter().map(expand).collect::<Result<_, _>>()?),
         Sym::Mul(f) => {
             let mut acc = vec![n(1)];
@@ -68,6 +86,21 @@ pub fn expand(s: &Sym) -> SR {
             let base = expand(b)?;
             match (e.as_num().and_then(|k| if k.is_integer() { k.to_u32() } else { None }), &base) {
                 (Some(k), Sym::Add(t)) if k >= 2 => {
+                    // Refuse up front rather than grinding through thousands of steps first.
+                    if power_terms(t.len(), k) > MAX_TERMS {
+                        return Err(too_big());
+                    }
+                    if let [a, b] = t.as_slice() {
+                        // Binomial theorem: Σ C(k,j)·a^(k−j)·b^j, one term per step.
+                        let mut c = BigInt::one();
+                        let mut terms = Vec::with_capacity(k as usize + 1);
+                        for j in 0..=k {
+                            let coeff = Sym::Num(Q::from_integer(c.clone()));
+                            terms.push(mul(vec![coeff, pow(a.clone(), n((k - j) as i64))?, pow(b.clone(), n(j as i64))?]));
+                            c = c * BigInt::from(k - j) / BigInt::from(j + 1);
+                        }
+                        return Ok(add(terms));
+                    }
                     let mut acc = vec![n(1)];
                     for _ in 0..k {
                         acc = distribute(acc, t)?;
@@ -80,6 +113,8 @@ pub fn expand(s: &Sym) -> SR {
         Sym::Func(f, x) => Sym::Func(*f, Box::new(expand(x)?)),
         Sym::Log(b, x) => Sym::Log(Box::new(expand(b)?), Box::new(expand(x)?)),
         Sym::Factorial(x, k) => Sym::Factorial(Box::new(expand(x)?), *k),
+        Sym::Matrix(m) => Sym::Matrix(m.iter().map(|r| r.iter().map(expand).collect::<Result<_, _>>()).collect::<Result<_, _>>()?),
+        Sym::Integral { .. } | Sym::Sum { .. } => s.clone(),
     })
 }
 
@@ -87,37 +122,37 @@ pub fn expand(s: &Sym) -> SR {
 
 /// Coefficients from the constant term up: `c[0] + c[1]·t + c[2]·t² + …`.
 #[derive(Debug, Clone, PartialEq)]
-struct Poly(Vec<Q>);
+pub(crate) struct Poly(pub(crate) Vec<Q>);
 
 impl Poly {
-    fn trim(mut self) -> Poly {
+    pub(crate) fn trim(mut self) -> Poly {
         while self.0.last().is_some_and(Zero::is_zero) {
             self.0.pop();
         }
         self
     }
 
-    fn is_zero(&self) -> bool {
+    pub(crate) fn is_zero(&self) -> bool {
         self.0.is_empty()
     }
 
-    fn deg(&self) -> usize {
+    pub(crate) fn deg(&self) -> usize {
         self.0.len().saturating_sub(1)
     }
 
-    fn lead(&self) -> &Q {
+    pub(crate) fn lead(&self) -> &Q {
         self.0.last().expect("non-zero polynomial")
     }
 
-    fn scale(&self, k: &Q) -> Poly {
+    pub(crate) fn scale(&self, k: &Q) -> Poly {
         Poly(self.0.iter().map(|c| c * k).collect()).trim()
     }
 
-    fn monic(&self) -> Poly {
+    pub(crate) fn monic(&self) -> Poly {
         self.scale(&self.lead().recip())
     }
 
-    fn mul(&self, o: &Poly) -> Poly {
+    pub(crate) fn mul(&self, o: &Poly) -> Poly {
         if self.is_zero() || o.is_zero() {
             return Poly(vec![]);
         }
@@ -130,11 +165,11 @@ impl Poly {
         Poly(c).trim()
     }
 
-    fn derivative(&self) -> Poly {
+    pub(crate) fn derivative(&self) -> Poly {
         Poly(self.0.iter().enumerate().skip(1).map(|(i, c)| c * Q::from_integer(i.into())).collect()).trim()
     }
 
-    fn divmod(&self, d: &Poly) -> (Poly, Poly) {
+    pub(crate) fn divmod(&self, d: &Poly) -> (Poly, Poly) {
         let mut r = self.0.clone();
         let dd = d.deg();
         if self.deg() < dd || self.is_zero() {
@@ -155,7 +190,7 @@ impl Poly {
         (Poly(q).trim(), Poly(r).trim())
     }
 
-    fn gcd(a: &Poly, b: &Poly) -> Poly {
+    pub(crate) fn gcd(a: &Poly, b: &Poly) -> Poly {
         let (mut a, mut b) = (a.clone(), b.clone());
         while !b.is_zero() {
             let r = a.divmod(&b).1;
@@ -165,12 +200,12 @@ impl Poly {
         if a.is_zero() { a } else { a.monic() }
     }
 
-    fn eval(&self, x: &Q) -> Q {
+    pub(crate) fn eval(&self, x: &Q) -> Q {
         self.0.iter().rev().fold(Q::zero(), |acc, c| acc * x + c)
     }
 
     /// Scales to integer coefficients with gcd 1 and a positive leading coefficient.
-    fn primitive(&self) -> Poly {
+    pub(crate) fn primitive(&self) -> Poly {
         let lcm = self.0.iter().fold(BigInt::one(), |l, c| l.lcm(c.denom()));
         let ints: Vec<BigInt> = self.0.iter().map(|c| (c * Q::from_integer(lcm.clone())).to_integer()).collect();
         let g = ints.iter().fold(BigInt::zero(), |g, c| g.gcd(c));
@@ -179,7 +214,7 @@ impl Poly {
         Poly(ints.into_iter().map(|c| Q::from_integer(c / &k)).collect())
     }
 
-    fn to_sym(&self, atom: &Sym) -> Sym {
+    pub(crate) fn to_sym(&self, atom: &Sym) -> Sym {
         add(self
             .0
             .iter()
@@ -190,7 +225,7 @@ impl Poly {
     }
 }
 
-fn pow_int(atom: &Sym, k: u32) -> Sym {
+pub(crate) fn pow_int(atom: &Sym, k: u32) -> Sym {
     match k {
         0 => n(1),
         1 => atom.clone(),
@@ -230,7 +265,7 @@ fn square_free(f: &Poly) -> Vec<(Poly, u32)> {
 }
 
 impl Poly {
-    fn trim_sub(&self, o: &Poly) -> Poly {
+    pub(crate) fn trim_sub(&self, o: &Poly) -> Poly {
         let len = self.0.len().max(o.0.len());
         let mut c = vec![Q::zero(); len];
         for (i, v) in self.0.iter().enumerate() {
@@ -300,7 +335,7 @@ fn rational_roots(f: Poly) -> (Vec<Poly>, Poly) {
 }
 
 /// Factors of a univariate polynomial, as (primitive factor, multiplicity).
-fn factor_univariate(f: &Poly) -> Vec<(Poly, u32)> {
+pub(crate) fn factor_univariate(f: &Poly) -> Vec<(Poly, u32)> {
     let mut out: Vec<(Poly, u32)> = Vec::new();
     for (part, m) in square_free(f) {
         let (lins, rest) = rational_roots(part);
@@ -317,9 +352,9 @@ fn factor_univariate(f: &Poly) -> Vec<(Poly, u32)> {
 // ---------- Factor ----------
 
 /// A term as rational coefficient × product of atoms to positive integer powers.
-type Monomial = (Q, BTreeMap<Sym, u32>);
+pub(crate) type Monomial = (Q, BTreeMap<Sym, u32>);
 
-fn monomial(term: &Sym) -> Monomial {
+pub(crate) fn monomial(term: &Sym) -> Monomial {
     let factors = match term {
         Sym::Mul(f) => f.clone(),
         other => vec![other.clone()],

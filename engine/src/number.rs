@@ -12,6 +12,8 @@ pub const RM: RoundingMode = RoundingMode::ToEven;
 pub enum Value {
     Exact(BigRational),
     Real(BigFloat),
+    /// Real and imaginary parts; the imaginary part is never zero (see `eval::from_c`).
+    Complex(BigFloat, BigFloat),
 }
 
 /// Working precision plus the constants cache that astro-float needs.
@@ -38,6 +40,8 @@ impl Prec {
     pub fn float_of(&mut self, v: &Value) -> BigFloat {
         match v {
             Value::Real(f) => f.clone(),
+            // Callers handle complex values first; NaN turns a slip into an error, not a wrong answer.
+            Value::Complex(..) => BigFloat::nan(None),
             Value::Exact(r) => {
                 let n = self.parse_int(r.numer());
                 if r.denom().is_one() {
@@ -51,6 +55,11 @@ impl Prec {
     }
 
     fn parse_int(&mut self, i: &BigInt) -> BigFloat {
+        // Small integers directly; the decimal round trip is slow in a tight loop (Σ 1/k²).
+        if let Some(w) = i.magnitude().to_u64() {
+            let f = BigFloat::from_word(w, self.bits);
+            return if i.is_negative() { f.neg() } else { f };
+        }
         BigFloat::parse(&i.to_string(), Radix::Dec, self.bits, RM, &mut self.cc)
     }
 
@@ -205,13 +214,76 @@ pub fn format_value(v: &Value, prec: &mut Prec) -> Option<Decimal> {
     let sig = prec.digits;
     let (neg, digits, exp, exact) = match v {
         Value::Exact(r) => rational_digits(r, sig),
-        Value::Real(f) => {
-            let (neg, d, e) = prec.float_digits(f)?;
-            let (d, e) = round_digits(&d, e, sig);
-            (neg, d, e, false)
-        }
+        Value::Real(f) => float_parts(f, prec)?,
+        Value::Complex(re, im) => return format_complex(re, im, prec),
     };
     Some(render_decimal(neg, &digits, exp, exact))
+}
+
+fn float_parts(f: &BigFloat, prec: &mut Prec) -> Option<(bool, String, i64, bool)> {
+    let (neg, d, e) = prec.float_digits(f)?;
+    let (d, e) = round_digits(&d, e, prec.digits);
+    Some((neg, d, e, false))
+}
+
+fn format_complex(re: &BigFloat, im: &BigFloat, prec: &mut Prec) -> Option<Decimal> {
+    // A part far below the digits shown is rounding noise (e^{iπ} = −1 + 10⁻⁶⁰i). The cutoff
+    // depends on the digits shown, not the working precision, so runs at different
+    // precisions agree.
+    let cutoff = (prec.digits as f64 * 3.322) as i64 + 14;
+    let exp = |f: &BigFloat| f.exponent().map(|e| e as i64).filter(|_| !f.is_zero());
+    let (er, ei) = (exp(re), exp(im));
+    let keep_re = match (er, ei) {
+        (Some(a), Some(b)) => a >= b - cutoff,
+        (a, _) => a.is_some(),
+    };
+    let keep_im = match (er, ei) {
+        (Some(a), Some(b)) => b >= a - cutoff,
+        (_, b) => b.is_some(),
+    };
+    if !keep_im {
+        return format_value(&Value::Real(if keep_re { re.clone() } else { BigFloat::from_word(0, 64) }), prec);
+    }
+    let real_part = if keep_re {
+        let (neg, d, e, x) = float_parts(re, prec)?;
+        Some(render_decimal(neg, &d, e, x))
+    } else {
+        None
+    };
+    let (im_neg, d, e, x) = float_parts(im, prec)?;
+    Some(join_complex(real_part, im_neg, render_decimal(false, &d, e, x)))
+}
+
+/// a + bi with exact rational parts.
+pub fn format_complex_exact(re: &BigRational, im: &BigRational, sig: usize) -> Decimal {
+    let part = |r: &BigRational| {
+        let (neg, d, e, x) = rational_digits(r, sig);
+        (neg, render_decimal(false, &d, e, x))
+    };
+    let (im_neg, im_dec) = part(im);
+    let real_part = (!re.is_zero()).then(|| {
+        let (neg, d, e, x) = rational_digits(re, sig);
+        render_decimal(neg, &d, e, x)
+    });
+    if im.is_zero() {
+        return real_part.unwrap_or_else(|| render_decimal(false, "0", 0, true));
+    }
+    join_complex(real_part, im_neg, im_dec)
+}
+
+/// Joins a real part and the magnitude of an imaginary part: 3−2i, 2i, −i.
+fn join_complex(re: Option<Decimal>, im_neg: bool, im: Decimal) -> Decimal {
+    let sign = if im_neg { "-" } else if re.is_some() { "+" } else { "" };
+    let (coef_text, coef_latex) = if im.text == "1" { ("", "") } else { (im.text.as_str(), im.latex.as_str()) };
+    let (re_text, re_latex, re_exact) = match &re {
+        Some(d) => (d.text.as_str(), d.latex.as_str(), d.exact),
+        None => ("", "", true),
+    };
+    Decimal {
+        text: format!("{re_text}{sign}{coef_text}i"),
+        latex: format!("{re_latex}{sign}{coef_latex}i"),
+        exact: re_exact && im.exact,
+    }
 }
 
 /// Rounds a digit string (first digit at 10^exp) to `sig` significant digits.
@@ -291,6 +363,18 @@ pub fn rational_latex(r: &BigRational) -> String {
     } else {
         format!("{sign}\\frac{{{}}}{{{}}}", group_latex(&n), group_latex(&r.denom().to_string()))
     }
+}
+
+/// The nearest f64, from the top 64 bits of the mantissa (value = m/2⁶⁴ · 2ᵉ).
+/// For plotting, where 16 digits are plenty.
+pub fn float_to_f64(f: &BigFloat) -> Option<f64> {
+    if f.is_zero() {
+        return Some(0.0);
+    }
+    let (words, _, sign, exp, _) = f.as_raw_parts()?;
+    let top = *words.last()? as f64;
+    let v = top / 18_446_744_073_709_551_616.0 * 2f64.powi(exp);
+    Some(if sign == astro_float::Sign::Neg { -v } else { v })
 }
 
 pub fn is_negative_float(f: &BigFloat) -> bool {

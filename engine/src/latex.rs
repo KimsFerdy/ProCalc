@@ -7,14 +7,18 @@ use num_traits::{One, Signed, Zero};
 
 use crate::ast::{Const, Func};
 use crate::number;
-use crate::sym::Sym;
+use crate::sym::{Sym, contains_i};
 
 pub fn latex(s: &Sym) -> String {
     match s {
         Sym::Num(v) => number::rational_latex(v),
         Sym::Const(Const::Pi) => "\\pi".into(),
         Sym::Const(Const::E) => "e".into(),
+        Sym::Const(Const::I) => "i".into(),
+        Sym::Matrix(m) => crate::matrix::matrix_latex(m),
+        Sym::Const(Const::Inf) => "\\infty".into(),
         Sym::Var(v) => v.clone(),
+        Sym::Unit(u) => crate::units::unit_latex(u),
         Sym::Add(terms) => add(terms),
         Sym::Mul(_) | Sym::Pow(..) => product(s),
         Sym::Func(f, x) => func(*f, x),
@@ -24,6 +28,13 @@ pub fn latex(s: &Sym) -> String {
             } else {
                 format!("\\log_{{{}}}\\left({}\\right)", latex(b), latex(x))
             }
+        }
+        Sym::Integral { body, var, lo, hi } => {
+            format!("\\int_{{{}}}^{{{}}}{}\\,\\mathrm{{d}}{var}", latex(lo), latex(hi), latex(body))
+        }
+        Sym::Sum { body, var, lo, hi } => {
+            let inner = if matches!(**body, Sym::Add(_)) { format!("\\left({}\\right)", latex(body)) } else { latex(body) };
+            format!("\\sum_{{{var}={}}}^{{{}}}{inner}", latex(lo), latex(hi))
         }
         Sym::Factorial(x, step) => {
             let bangs = "!".repeat(*step as usize);
@@ -42,6 +53,7 @@ fn func(f: Func, x: &Sym) -> String {
         Func::Abs => format!("\\left|{inner}\\right|"),
         Func::Floor => format!("\\left\\lfloor {inner}\\right\\rfloor"),
         Func::Ceil => format!("\\left\\lceil {inner}\\right\\rceil"),
+        Func::Conj => format!("\\overline{{{inner}}}"),
         _ => format!("{}\\left({inner}\\right)", f.latex()),
     }
 }
@@ -49,7 +61,7 @@ fn func(f: Func, x: &Sym) -> String {
 fn is_atom(s: &Sym) -> bool {
     match s {
         Sym::Num(v) => v.is_integer() && !v.is_negative(),
-        Sym::Const(_) | Sym::Var(_) => true,
+        Sym::Const(_) | Sym::Var(_) | Sym::Unit(_) => true,
         _ => false,
     }
 }
@@ -91,12 +103,71 @@ fn split_sign(t: &Sym) -> (bool, Sym) {
     }
 }
 
+/// The variable a product factor is a power of: x for x, x² and x^(1/2).
+fn var_name(s: &Sym) -> Option<&str> {
+    match s {
+        Sym::Var(v) => Some(v),
+        Sym::Pow(b, _) => match &**b {
+            Sym::Var(v) => Some(v),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// The factors of a term with its sign and coefficient removed.
+fn term_factors(t: &Sym) -> Vec<Sym> {
+    match split_sign(t).1.without_coeff() {
+        Sym::Mul(f) => f,
+        other => vec![other],
+    }
+}
+
+/// Exponent of each variable in `vars` within a term: a²b → [2, 1] for vars [a, b].
+fn exponents(t: &Sym, vars: &[String]) -> Vec<Q> {
+    let factors = term_factors(t);
+    vars.iter()
+        .map(|v| {
+            factors
+                .iter()
+                .filter(|f| var_name(f) == Some(v.as_str()))
+                .map(|f| match f {
+                    Sym::Pow(_, e) => e.as_num().cloned().unwrap_or_else(Q::one),
+                    _ => Q::one(),
+                })
+                .sum()
+        })
+        .collect()
+}
+
+/// A term with a letter in its denominator: 2/(x − 1), x/y.
+fn var_below(t: &Sym) -> bool {
+    let below = |f: &Sym| matches!(f, Sym::Pow(b, e) if b.has_vars() && e.as_num().is_some_and(|k| k.is_negative()));
+    match t {
+        Sym::Mul(v) => v.iter().any(below),
+        other => below(other),
+    }
+}
+
 fn add(terms: &[Sym]) -> String {
     let mut ordered: Vec<&Sym> = terms.iter().collect();
-    // Variables first by descending degree, then surds, then π/e terms, then plain numbers.
+    let mut vars: Vec<String> = terms
+        .iter()
+        .flat_map(term_factors)
+        .filter_map(|f| var_name(&f).map(str::to_string))
+        .collect();
+    vars.sort();
+    vars.dedup();
+    // Variables first by descending degree (ties in lexicographic order: a³ + a²b + ab² + b³),
+    // then surds, then π/e terms, then plain numbers, then fractions with a letter below
+    // (x + 1 + 2/(x − 1), positive ones first), then imaginary terms (3 + 2i).
     ordered.sort_by_key(|t| {
-        let group = if t.has_vars() {
+        let group = if var_below(t) {
+            4
+        } else if t.has_vars() {
             0
+        } else if contains_i(t) {
+            5
         } else if matches!(t, Sym::Num(_)) {
             3
         } else if has_const(t) {
@@ -104,7 +175,8 @@ fn add(terms: &[Sym]) -> String {
         } else {
             1
         };
-        (group, Reverse(degree(t)), latex(&split_sign(t).1.without_coeff()))
+        let negative_fraction = group == 4 && split_sign(t).0;
+        (group, negative_fraction, Reverse(degree(t)), Reverse(exponents(t, &vars)), latex(&split_sign(t).1.without_coeff()))
     });
     let mut out = String::new();
     for (i, t) in ordered.into_iter().enumerate() {
@@ -129,6 +201,8 @@ fn factor_rank(s: &Sym) -> u8 {
         Sym::Const(_) => 2,
         Sym::Var(_) => 3,
         Sym::Pow(b, _) if matches!(**b, Sym::Var(_)) => 3,
+        Sym::Unit(_) => 5,
+        Sym::Pow(b, _) if matches!(**b, Sym::Unit(_)) => 5,
         _ => 4,
     }
 }
@@ -180,17 +254,24 @@ fn product(s: &Sym) -> String {
     }
     let sign = if negative { "-" } else { "" };
     if bottom.is_empty() {
-        format!("{sign}{}", juxtapose(top))
-    } else {
-        let num = if top.is_empty() { "1".to_string() } else { juxtapose(top) };
-        format!("{sign}\\frac{{{num}}}{{{}}}", juxtapose(bottom))
+        return format!("{sign}{}", juxtapose(top));
     }
+    // A lone sum above or below the bar needs no brackets: \frac{x-2}{x+2}.
+    let side = |fs: Vec<Sym>| match fs.as_slice() {
+        [] => "1".to_string(),
+        [s @ Sym::Add(_)] => latex(s),
+        _ => juxtapose(fs),
+    };
+    format!("{sign}\\frac{{{}}}{{{}}}", side(top), side(bottom))
 }
 
 /// Writes factors side by side: 2√3πx², merging same-index roots (√5·√x → √(5x)).
 fn juxtapose(mut factors: Vec<Sym>) -> String {
-    // Bracketed factors in textbook order: (x−1)(x+1), (x−1)(2x+1).
-    factors.sort_by_key(|f| (factor_rank(f), degree(f), constant_term(f), latex(f)));
+    // Variables alphabetically (a²b, not ba²); bracketed factors in textbook order:
+    // (x−1)(x+1), (x−1)(2x+1).
+    factors.sort_by_key(|f| {
+        (factor_rank(f), var_name(f).map(str::to_string), degree(f), constant_term(f), latex(f))
+    });
     // Merge roots of equal index into one radical.
     let mut roots: Vec<(u64, Vec<Sym>)> = Vec::new();
     let mut others: Vec<Sym> = Vec::new();
@@ -212,7 +293,11 @@ fn juxtapose(mut factors: Vec<Sym>) -> String {
         parts.push(latex(&rest.next().unwrap()));
     }
     for (k, bases) in roots {
-        let inner = juxtapose(bases);
+        // A lone sum under a root needs no brackets: √(x+1), not √((x+1)).
+        let inner = match bases.as_slice() {
+            [single] => latex(single),
+            _ => juxtapose(bases),
+        };
         parts.push(if k == 2 { format!("\\sqrt{{{inner}}}") } else { format!("\\sqrt[{k}]{{{inner}}}") });
     }
     for f in rest {
@@ -244,10 +329,12 @@ fn constant_term(s: &Sym) -> Q {
 fn has_const(s: &Sym) -> bool {
     match s {
         Sym::Const(_) => true,
-        Sym::Num(_) | Sym::Var(_) => false,
+        Sym::Num(_) | Sym::Var(_) | Sym::Unit(_) => false,
         Sym::Add(v) | Sym::Mul(v) => v.iter().any(has_const),
         Sym::Pow(a, b) | Sym::Log(a, b) => has_const(a) || has_const(b),
         Sym::Func(_, a) | Sym::Factorial(a, _) => has_const(a),
+        Sym::Matrix(m) => m.iter().flatten().any(has_const),
+        Sym::Integral { body, lo, hi, .. } | Sym::Sum { body, lo, hi, .. } => has_const(body) || has_const(lo) || has_const(hi),
     }
 }
 
@@ -277,12 +364,12 @@ fn power(b: &Sym, e: &Sym) -> String {
     }
     // sin²(x): a positive integer power of a named function goes on the name.
     if let (Sym::Func(f, x), Some(k)) = (b, e.as_num())
-        && k.is_integer() && k.is_positive() && !matches!(f, Func::Abs | Func::Floor | Func::Ceil) {
+        && k.is_integer() && k.is_positive() && !matches!(f, Func::Abs | Func::Floor | Func::Ceil | Func::Conj) {
             return format!("{}^{{{}}}\\left({}\\right)", f.latex(), latex(e), latex(x));
         }
     let base = match b {
         Sym::Num(v) if v.is_integer() && !v.is_negative() => latex(b),
-        Sym::Const(_) | Sym::Var(_) => latex(b),
+        Sym::Const(_) | Sym::Var(_) | Sym::Unit(_) => latex(b),
         _ => format!("\\left({}\\right)", latex(b)),
     };
     format!("{base}^{{{}}}", latex(e))

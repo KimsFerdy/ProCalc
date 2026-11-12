@@ -7,6 +7,7 @@ use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
 use crate::ast::{BinOp, Const, Expr, Func};
+use crate::complex::{self, C};
 use crate::number::{self, Prec, RM, Value, int};
 use crate::{AngleMode, EngineError};
 
@@ -17,6 +18,13 @@ pub(crate) const MAX_FACTORIAL: i64 = 20_000;
 pub struct Evaluator {
     pub prec: Prec,
     pub angle: AngleMode,
+    /// User function calls made so far (see `defs::MAX_CALLS`).
+    pub calls: usize,
+    /// Values for variables: the integration variable during numeric integration, or the
+    /// sample points when an antiderivative is checked.
+    pub vars: std::collections::BTreeMap<String, Value>,
+    /// Working collected while a line is built (derivatives, integrals…), for the Steps view.
+    pub work: Vec<crate::Method>,
 }
 
 type R = Result<Value, EngineError>;
@@ -25,11 +33,26 @@ pub(crate) fn zeroth_root_err() -> EngineError {
     EngineError::new("The 0th root is undefined")
 }
 
-pub(crate) fn complex_err() -> EngineError {
-    EngineError::new("The result is a complex number (complex mode is coming soon)")
+/// A complex result as a `Value`: real when the imaginary part is exactly zero.
+pub(crate) fn from_c(c: C) -> Value {
+    if c.im.is_zero() { Value::Real(c.re) } else { Value::Complex(c.re, c.im) }
+}
+
+fn is_complex(v: &Value) -> bool {
+    matches!(v, Value::Complex(..))
 }
 
 impl Evaluator {
+    fn cx(&mut self, v: &Value) -> C {
+        match v {
+            Value::Complex(re, im) => C::new(re.clone(), im.clone()),
+            other => {
+                let f = self.prec.float_of(other);
+                complex::real(f, &self.prec)
+            }
+        }
+    }
+
     pub fn eval(&mut self, e: &Expr) -> R {
         match e {
             Expr::Number(s) => number::parse_exact(s)
@@ -37,15 +60,66 @@ impl Evaluator {
                 .ok_or_else(|| EngineError::new(format!("Bad number '{s}'"))),
             Expr::Const(Const::Pi) => Ok(Value::Real(self.prec.cc.pi(self.prec.bits, RM))),
             Expr::Const(Const::E) => Ok(Value::Real(self.prec.cc.e(self.prec.bits, RM))),
-            Expr::Var(v) => Err(EngineError::new(format!("{v} has no value"))),
+            Expr::Const(Const::I) => {
+                let p = self.prec.bits;
+                Ok(Value::Complex(BigFloat::from_word(0, p), BigFloat::from_word(1, p)))
+            }
+            Expr::Var(v) => self.vars.get(v).cloned().ok_or_else(|| EngineError::new(format!("{v} has no value"))),
+            Expr::Const(Const::Inf) => Err(EngineError::new("Infinity isn't a number you can calculate with")),
+            // a × b between numbers is plain multiplication.
+            Expr::MatCall(crate::ast::MatFn::Times, args) if args.len() == 2 => {
+                let (a, b) = (self.eval(&args[0])?, self.eval(&args[1])?);
+                self.binary(BinOp::Mul, a, b)
+            }
+            Expr::Matrix(_) | Expr::MatCall(..) => Err(EngineError::new("Matrices need the symbolic engine")),
+            Expr::StatCall(..) | Expr::Optimize(..) | Expr::Geometry(..) => Err(EngineError::new("This needs the symbolic engine")),
+            Expr::OdeFn { name, .. } => Err(EngineError::new(format!("{name} is the unknown of a differential equation: write one, like {name}' = 2{name}"))),
+            Expr::Integral { body, var, bounds: Some((lo, hi)) } => {
+                // ∞ bounds map the range onto [0, 1).
+                let range = match (infinity_sign(lo), infinity_sign(hi)) {
+                    (None, None) => {
+                        let a = self.eval(lo)?;
+                        let b = self.eval(hi)?;
+                        return crate::calculus::quadrature(body, var, &a, &b, self);
+                    }
+                    (None, Some(1)) => crate::calculus::Range::Above(self.eval(lo)?),
+                    (Some(-1), None) => crate::calculus::Range::Below(self.eval(hi)?),
+                    (Some(-1), Some(1)) => crate::calculus::Range::Whole,
+                    _ => return Err(EngineError::new("Put the smaller bound at the bottom of an infinite integral")),
+                };
+                crate::calculus::quadrature_infinite(body, var, range, self)
+            }
+            Expr::Sum { body, var, lo, hi, product: false } => crate::sums::eval_sum(body, var, lo, hi, self),
+            Expr::Sum { product: true, .. } | Expr::Limit { .. } | Expr::Taylor { .. } | Expr::PolyDiv { .. } => {
+                Err(EngineError::new("This needs the symbolic engine"))
+            }
+            // The symbolic layer does these before anything reaches here.
+            Expr::Integral { bounds: None, .. }
+            | Expr::Deriv { .. }
+            | Expr::UserDeriv { .. }
+            | Expr::Subst(..)
+            | Expr::BarEval(..) => Err(EngineError::new("This needs the symbolic engine")),
+            // The symbolic layer expands user calls before anything reaches here.
+            Expr::UserCall(name, _) => Err(EngineError::new(format!("{name} isn't defined"))),
+            // Number functions need whole numbers, which the symbolic layer works out exactly.
+            Expr::NumCall(f, _) => Err(EngineError::new(format!("{} needs exact numbers", f.name()))),
+            // Units are taken off by `units::resolve` before numeric evaluation; one that
+            // reaches here sits somewhere units can't go, like floor(2.5 m).
+            Expr::Unit(_) | Expr::Convert(..) => Err(EngineError::new("Units can't be used here")),
             Expr::Neg(x) => Ok(match self.eval(x)? {
                 Value::Exact(r) => Value::Exact(-r),
                 Value::Real(f) => Value::Real(f.neg()),
+                Value::Complex(re, im) => Value::Complex(re.neg(), im.neg()),
             }),
             Expr::Binary(op, a, b) => {
                 let a = self.eval(a)?;
                 let b = self.eval(b)?;
                 self.binary(*op, a, b)
+            }
+            // e^y straight through exp: faster than the general power, and as accurate.
+            Expr::Pow(a, b) if **a == Expr::Const(Const::E) => {
+                let b = self.eval(b)?;
+                self.call(Func::Exp, b)
             }
             Expr::Pow(a, b) => {
                 let a = self.eval(a)?;
@@ -112,6 +186,16 @@ impl Evaluator {
                 }
             }));
         }
+        if is_complex(&a) || is_complex(&b) {
+            let (x, y) = (self.cx(&a), self.cx(&b));
+            let pr = &self.prec;
+            return Ok(from_c(match op {
+                BinOp::Add => complex::add(&x, &y, pr),
+                BinOp::Sub => complex::sub(&x, &y, pr),
+                BinOp::Mul => complex::mul(&x, &y, pr),
+                BinOp::Div => complex::div(&x, &y, pr)?,
+            }));
+        }
         let (x, y) = (self.f(&a), self.f(&b));
         Ok(Value::Real(match op {
             BinOp::Add => x.add(&y, p, RM),
@@ -131,7 +215,9 @@ impl Evaluator {
             && let Some(v) = exact_pow(base, exp)? {
                 return Ok(Value::Exact(v));
             }
-        let p = self.prec.bits;
+        if is_complex(&a) || is_complex(&b) {
+            return self.complex_pow(a, b);
+        }
         let x = self.f(&a);
         let y = self.f(&b);
         if x.is_zero() {
@@ -141,17 +227,52 @@ impl Evaluator {
             return Ok(Value::Real(x));
         }
         if number::is_negative_float(&x) {
-            // Negative base: fine for integer exponents, or rational ones with an odd denominator.
+            // Negative base: real for integer exponents, or rational ones with an odd denominator
+            // ((−8)^⅓ = −2, the calculator convention). Anything else is complex.
             let sign = match &b {
                 Value::Exact(r) if r.denom().is_odd_int() => {
                     if r.numer().is_odd_int() { -1 } else { 1 }
                 }
-                _ => return Err(complex_err()),
+                _ => return self.complex_pow(a, b),
             };
-            let mag = x.abs().pow(&y, p, RM, &mut self.prec.cc);
+            let mag = self.real_pow(&x.abs(), &y, &b);
             return Ok(Value::Real(if sign < 0 { mag.neg() } else { mag }));
         }
-        Ok(Value::Real(x.pow(&y, p, RM, &mut self.prec.cc)))
+        Ok(Value::Real(self.real_pow(&x, &y, &b)))
+    }
+
+    /// xʸ for x > 0. Exponent ½ goes through sqrt. Everything else uses pow without
+    /// last-bit rounding: astro-float's correctly rounded pow can loop forever when the
+    /// true result is exactly representable (a float 4.0 to the 0.5), and the precision
+    /// check in `lib.rs` already guards the digits we show.
+    fn real_pow(&mut self, x: &BigFloat, y: &BigFloat, exact_y: &Value) -> BigFloat {
+        let p = self.prec.bits;
+        if let Value::Exact(r) = exact_y {
+            if *r == BigRational::new(1.into(), 2.into()) {
+                return x.sqrt(p, RM);
+            }
+            // Small whole powers by repeated multiplication (x² is just x·x).
+            if r.is_integer()
+                && let Some(k) = r.numer().to_i64().filter(|k| (1..=64).contains(&k.abs()))
+            {
+                let pos = x.powi(k.unsigned_abs() as usize, p, RM);
+                return if k < 0 { pos.reciprocal(p, RM) } else { pos };
+            }
+        }
+        x.pow(y, p, astro_float::RoundingMode::None, &mut self.prec.cc)
+    }
+
+    fn complex_pow(&mut self, a: Value, b: Value) -> R {
+        let z = self.cx(&a);
+        // Integer powers by repeated squaring stay accurate: i² is exactly −1.
+        if let Value::Exact(r) = &b
+            && r.is_integer()
+            && let Some(k) = r.numer().to_i64().filter(|k| k.unsigned_abs() <= 4096)
+        {
+            return Ok(from_c(complex::powi(&z, k, &self.prec)?));
+        }
+        let w = self.cx(&b);
+        Ok(from_c(complex::pow(&z, &w, &mut self.prec)?))
     }
 
     fn root(&mut self, n: Value, x: Value) -> R {
@@ -171,6 +292,7 @@ impl Evaluator {
         let n = match &x {
             Value::Exact(r) => number::to_i64(r),
             Value::Real(f) => self.prec.float_to_int(f).and_then(|i| i.to_i64()),
+            Value::Complex(..) => None,
         };
         // (−1)!! = 1 by convention, which keeps n!! = n·(n−2)!! true for n = 1.
         let lowest = if step == 2 { -1 } else { 0 };
@@ -187,7 +309,13 @@ impl Evaluator {
             Some(n) if n > MAX_FACTORIAL => {
                 Err(EngineError::new(format!("Factorial is limited to n ≤ {MAX_FACTORIAL} for now")))
             }
-            _ => Err(EngineError::new("Factorial needs a whole number ≥ 0 (gamma function is coming)")),
+            Some(_) => Err(EngineError::new("Factorial is undefined for negative whole numbers")),
+            // x! = Γ(x+1) between the whole numbers.
+            None if step == 1 && !is_complex(&x) => {
+                let x1 = self.binary(BinOp::Add, x, Value::Exact(BigRational::one()))?;
+                self.call(Func::Gamma, x1)
+            }
+            None => Err(EngineError::new("Factorial needs a real number (and n!! a whole one)")),
         }
     }
 
@@ -227,18 +355,109 @@ impl Evaluator {
         }
     }
 
-    pub(crate) fn call(&mut self, f: Func, x: Value) -> R {
+    /// Multiplies a complex angle by π/180 (`to_rad`) or 180/π in degree mode.
+    fn convert_angle(&mut self, z: C, to_rad: bool) -> C {
+        if self.angle == AngleMode::Radians {
+            return z;
+        }
         let p = self.prec.bits;
+        let pi = self.prec.cc.pi(p, RM);
+        let k180 = BigFloat::from_word(180, p);
+        let k = if to_rad { pi.div(&k180, p, RM) } else { k180.div(&pi, p, RM) };
+        complex::scale_by(&z, &k, &self.prec)
+    }
+
+    fn complex_call(&mut self, f: Func, x: Value) -> R {
+        let z = self.cx(&x);
+        let out = match f {
+            Func::Abs => return Ok(Value::Real(complex::abs(&z, &self.prec))),
+            Func::Floor | Func::Ceil => {
+                return Err(EngineError::new("floor and ceil need a real number"));
+            }
+            Func::Gamma => return Err(EngineError::new("Γ of a complex number isn't supported yet")),
+            Func::Erf | Func::Probit => return Err(EngineError::new(format!("{} of a complex number isn't supported", f.latex()))),
+            Func::Re => return Ok(Value::Real(z.re)),
+            Func::Im => return Ok(Value::Real(z.im)),
+            Func::Conj => return Ok(from_c(C::new(z.re, z.im.neg()))),
+            Func::Arg => {
+                let a = complex::arg(&z, &mut self.prec);
+                return Ok(Value::Real(self.rad_to_angle(a)));
+            }
+            Func::Sqrt => complex::sqrt(&z, &mut self.prec),
+            Func::Exp => complex::exp(&z, &mut self.prec),
+            Func::Ln => complex::ln(&z, &mut self.prec)?,
+            Func::Log => {
+                let l = complex::ln(&z, &mut self.prec)?;
+                let p = self.prec.bits;
+                let ln10 = BigFloat::from_word(10, p).ln(p, RM, &mut self.prec.cc);
+                complex::scale_by(&l, &ln10.reciprocal(p, RM), &self.prec)
+            }
+            Func::Sin | Func::Cos | Func::Tan => {
+                let r = self.convert_angle(z, true);
+                let pr = &mut self.prec;
+                match f {
+                    Func::Sin => complex::sin(&r, pr),
+                    Func::Cos => complex::cos(&r, pr),
+                    _ => complex::tan(&r, pr)?,
+                }
+            }
+            Func::Asin | Func::Acos | Func::Atan => {
+                let pr = &mut self.prec;
+                let r = match f {
+                    Func::Asin => complex::asin(&z, pr)?,
+                    Func::Acos => complex::acos(&z, pr)?,
+                    _ => complex::atan(&z, pr)?,
+                };
+                self.convert_angle(r, false)
+            }
+            Func::Sinh => complex::sinh(&z, &mut self.prec),
+            Func::Cosh => complex::cosh(&z, &mut self.prec),
+            Func::Tanh => complex::tanh(&z, &mut self.prec)?,
+            Func::Asinh => complex::asinh(&z, &mut self.prec)?,
+            Func::Acosh => complex::acosh(&z, &mut self.prec)?,
+            Func::Atanh => complex::atanh(&z, &mut self.prec)?,
+        };
+        if out.re.is_nan() || out.im.is_nan() {
+            return Err(EngineError::new("Calculation failed (result is undefined)"));
+        }
+        Ok(from_c(out))
+    }
+
+    pub(crate) fn call(&mut self, f: Func, x: Value) -> R {
+        if is_complex(&x) {
+            return self.complex_call(f, x);
+        }
+        let p = self.prec.bits;
+        // A real number is its own real part and conjugate, at angle 0 or π.
+        match f {
+            Func::Re | Func::Conj => return Ok(x),
+            Func::Im => return Ok(Value::Exact(BigRational::zero())),
+            Func::Arg => {
+                let negative = match &x {
+                    Value::Exact(r) => r.is_negative(),
+                    v => number::is_negative_float(&self.prec.float_of(v)),
+                };
+                if !negative {
+                    return Ok(Value::Exact(BigRational::zero()));
+                }
+                return Ok(match self.angle {
+                    AngleMode::Degrees => Value::Exact(int(180)),
+                    AngleMode::Radians => Value::Real(self.prec.cc.pi(p, RM)),
+                });
+            }
+            _ => {}
+        }
         // Exact cases first.
         if let Value::Exact(r) = &x {
             match f {
                 Func::Abs => return Ok(Value::Exact(r.abs())),
                 Func::Floor => return Ok(Value::Exact(r.floor())),
                 Func::Ceil => return Ok(Value::Exact(r.ceil())),
+                // Γ(n) = (n−1)!
+                Func::Gamma if r.is_integer() && r.is_positive() => {
+                    return self.factorial(Value::Exact(r - BigRational::one()), 1);
+                }
                 Func::Sqrt => {
-                    if r.is_negative() {
-                        return Err(complex_err());
-                    }
                     if let Some(s) = number::exact_root(r, 2) {
                         return Ok(Value::Exact(s));
                     }
@@ -269,9 +488,20 @@ impl Evaluator {
 
         let v = self.f(&x);
         let one = BigFloat::from_word(1, p);
+        // Real arguments outside the real domain have complex results: √−4 = 2i, asin 2, ln −1.
+        let outside = match f {
+            Func::Sqrt | Func::Ln | Func::Log => number::is_negative_float(&v),
+            Func::Asin | Func::Acos | Func::Atanh => v.abs().cmp(&one).is_some_and(|c| c > 0),
+            Func::Acosh => v.cmp(&one).is_some_and(|c| c < 0),
+            _ => false,
+        };
+        if outside {
+            return self.complex_call(f, x);
+        }
         let cc = &mut self.prec.cc;
         let out = match f {
             Func::Abs => v.abs(),
+            Func::Re | Func::Im | Func::Arg | Func::Conj => unreachable!("handled before the exact cases"),
             Func::Floor => {
                 let fl = v.floor();
                 return Ok(self.prec.float_to_int(&fl).map_or(Value::Real(fl), |i| {
@@ -284,20 +514,14 @@ impl Evaluator {
                     Value::Exact(BigRational::from_integer(i))
                 }));
             }
-            Func::Sqrt => {
-                if number::is_negative_float(&v) {
-                    return Err(complex_err());
-                }
-                v.sqrt(p, RM)
-            }
+            Func::Sqrt => v.sqrt(p, RM),
+            Func::Gamma => crate::gamma::gamma(&v, &mut self.prec)?,
+            Func::Erf => crate::special::erf(&v, &mut self.prec),
+            Func::Probit => crate::special::probit(&v, &mut self.prec)?,
             Func::Exp => v.exp(p, RM, cc),
             Func::Ln | Func::Log => {
-                if v.is_zero() || number::is_negative_float(&v) {
-                    return Err(if v.is_zero() {
-                        EngineError::new("Logarithm of zero is undefined")
-                    } else {
-                        complex_err()
-                    });
+                if v.is_zero() {
+                    return Err(EngineError::new("Logarithm of zero is undefined"));
                 }
                 if f == Func::Ln { v.ln(p, RM, cc) } else { v.log10(p, RM, cc) }
             }
@@ -318,9 +542,6 @@ impl Evaluator {
                 return Ok(self.flush_noise(r, &rad));
             }
             Func::Asin | Func::Acos => {
-                if v.abs().cmp(&one).is_some_and(|c| c > 0) {
-                    return Err(complex_err());
-                }
                 let r = if f == Func::Asin { v.asin(p, RM, cc) } else { v.acos(p, RM, cc) };
                 Value::Real(self.rad_to_angle(r)).into_float()
             }
@@ -332,15 +553,10 @@ impl Evaluator {
             Func::Cosh => v.cosh(p, RM, cc),
             Func::Tanh => v.tanh(p, RM, cc),
             Func::Asinh => v.asinh(p, RM, cc),
-            Func::Acosh => {
-                if v.cmp(&one).is_some_and(|c| c < 0) {
-                    return Err(complex_err());
-                }
-                v.acosh(p, RM, cc)
-            }
+            Func::Acosh => v.acosh(p, RM, cc),
             Func::Atanh => {
                 if v.abs().cmp(&one).is_some_and(|c| c >= 0) {
-                    return Err(EngineError::new("artanh needs |x| < 1"));
+                    return Err(EngineError::new("artanh is infinite at ±1"));
                 }
                 v.atanh(p, RM, cc)
             }
@@ -382,7 +598,7 @@ impl Value {
     fn into_float(self) -> BigFloat {
         match self {
             Value::Real(f) => f,
-            Value::Exact(_) => unreachable!("only used on real values"),
+            Value::Exact(_) | Value::Complex(..) => unreachable!("only used on real values"),
         }
     }
 }
@@ -398,6 +614,16 @@ impl OddInt for BigInt {
 }
 
 /// `x * (π/180)` written with an explicit degree sign: returns `x`.
+/// 1 for ∞, −1 for −∞ (as `−1·∞` or `−∞`), None for anything else.
+pub(crate) fn infinity_sign(e: &Expr) -> Option<i8> {
+    match e {
+        Expr::Const(Const::Inf) => Some(1),
+        Expr::Neg(x) => infinity_sign(x).map(|s| -s),
+        Expr::Binary(BinOp::Mul, k, x) if matches!(&**k, Expr::Neg(one) if **one == Expr::Number("1".into())) => infinity_sign(x).map(|s| -s),
+        _ => None,
+    }
+}
+
 pub(crate) fn as_explicit_degrees(e: &Expr) -> Option<&Expr> {
     if let Expr::Binary(BinOp::Mul, x, factor) = e
         && let Expr::Binary(BinOp::Div, pi, d) = &**factor

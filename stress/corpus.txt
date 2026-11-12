@@ -1,0 +1,1110 @@
+# ProCalc stress corpus. Format: see engine/examples/stress.rs
+#   cargo run -p procalc-engine --example stress [section filter]
+
+## Arithmetic basics
+1+1 => = 2
+2+3\cdot4 => = 14
+(2+3)\cdot4 => = 20
+12\div4\times3 => = 9
+2^{10} => = 1\,024
+-2^{2} => = -4
+(-2)^{2} => = 4
+2(3+4) => = 14
+7-10 => = -3
+0\cdot123456789 => = 0
+100\% => = 1
+50\%\cdot80 => = 40
+\left|-7\right| => = 7
+|3-10| => = 7
+1-1+1-1+1-1+1 => = 1
+2^{3^{2}} => = 512
+10/4 => = \frac{5}{2}
+-(-(-5)) => = -5
+3.5+1.25 => = \frac{19}{4}
+1\,000\,000+1 => = 1\,000\,001
+
+## Floating point traps
+0.1+0.2 => ~ 0.3
+1-0.9 => ~ 0.1
+0.1\cdot3 => ~ 0.3
+1.1\cdot1.1 => ~ 1.21
+\frac{1}{3}\cdot3 => = 1
+0.3-0.1 => ~ 0.2
+4.35\cdot100 => = 435
+1.15\cdot100 => = 115
+\frac{2}{3} => ~ 0.66666666666666666666666666666667
+\frac{1}{7} => ~ 0.14285714285714285714285714285714
+10^{16}+1-10^{16} => = 1
+\frac{1}{10^{20}}\cdot10^{20} => = 1
+
+## Fractions
+\frac{1}{2}+\frac{1}{3} => = \frac{5}{6}
+\frac{1}{3}+\frac{1}{6} => = \frac{1}{2}
+\frac{3}{4}\cdot\frac{8}{9} => = \frac{2}{3}
+\frac{\frac{1}{2}}{\frac{1}{4}} => = 2
+\frac{1}{2}-\frac{1}{2} => = 0
+\frac12+\frac14 => = \frac{3}{4}
+\frac{22}{7}-\pi
+\frac{355}{113}
+\frac{-6}{4} => = -\frac{3}{2}
+\frac{1}{1+\frac{1}{1+\frac{1}{1+\frac{1}{2}}}} => = \frac{5}{8}
+
+## Powers and roots
+\sqrt{144} => = 12
+\sqrt{2} => ~ 1.4142135623730950488016887242097
+\sqrt[3]{27} => = 3
+\sqrt[3]{-27} => = -3
+\sqrt[4]{16} => = 2
+8^{\frac{2}{3}} => = 4
+2^{-3} => = \frac{1}{8}
+\sqrt{\frac{9}{4}} => = \frac{3}{2}
+\sqrt{8} => = 2\sqrt{2}
+\sqrt{12} => = 2\sqrt{3}
+\sqrt{50}+\sqrt{2} => = 6\sqrt{2}
+\sqrt{2}\cdot\sqrt{3} => = \sqrt{6}
+\sqrt{2}\cdot\sqrt{2} => = 2
+\frac{1}{\sqrt{2}} => = \frac{\sqrt{2}}{2}
+\frac{6}{\sqrt{3}} => = 2\sqrt{3}
+\sqrt[4]{4} => = \sqrt{2}
+\sqrt{72} => = 6\sqrt{2}
+27^{\frac{1}{3}} => = 3
+16^{0.25} => = 2
+0^{0}
+0^{5} => = 0
+1^{1000000} => = 1
+2^{100} => = 1\,267\,650\,600\,228\,229\,401\,496\,703\,205\,376
+10^{40} => ~ 1e40
+(-8)^{\frac{1}{3}} => = -2
+\sqrt{1000000} => = 1\,000
+\sqrt{2}^{2} => = 2
+(\sqrt{3})^{4} => = 9
+\sqrt[5]{32} => = 2
+\sqrt{0} => = 0
+
+## Factorials
+0! => = 1
+5! => = 120
+10! => = 3\,628\,800
+20! => = 2\,432\,902\,008\,176\,640\,000
+(3!)! => = 720
+10!! => = 3\,840
+9!! => = 945
+\frac{100!}{98!} => = 9\,900
+1000!
+20000!
+20001! => ! limited
+(-1)! => !
+2.5! => = \frac{15\sqrt{\pi}}{8}
+0.3! => ~ 0.89747069630627718849375495477148
+(-2.5)! => = \frac{4\sqrt{\pi}}{3}
+(-3)! => !
+
+## Number theory
+\gcd(12,18) => = 6
+\gcd(48,18,30) => = 6
+\gcd(0,5) => = 5
+\operatorname{lcm}(4,6) => = 12
+\operatorname{lcm}(4,6,10) => = 60
+\operatorname{hcf}(84,36) => = 12
+17\bmod5 => = 2
+-7\bmod3 => = 2
+17 mod 5 => = 2
+\operatorname{mod}(17,5) => = 2
+7.5\bmod2 => = \frac{3}{2}
+5\bmod0 => !
+\binom{5}{2} => = 10
+\binom{50}{25} => = 126\,410\,606\,437\,752
+\binom{5}{7} => = 0
+\operatorname{nCr}(5,2) => = 10
+\operatorname{nPr}(5,2) => = 20
+\operatorname{totient}(36) => = 12
+\operatorname{totient}(97) => = 96
+factor(360) => = 2^{3}\cdot 3^{2}\cdot 5
+factor(-84) => = -2^{2}\cdot 3\cdot 7
+factor(2^{64}+1) => = 274\,177\cdot 67\,280\,421\,310\,721
+factor(1000000007\cdot998244353) => = 998\,244\,353\cdot 1\,000\,000\,007
+\operatorname{isprime}(97) => = \text{prime}
+\operatorname{isprime}(91) => = \text{not prime: }91=7\cdot 13
+\operatorname{isprime}(2^{89}-1) => = \text{prime}
+\operatorname{isprime}(1) => = \text{not prime}
+\operatorname{divisors}(12) => = 1,\ 2,\ 3,\ 4,\ 6,\ 12
+\operatorname{divisors}(0) => !
+\gcd(x,2) => !
+\gcd(2.5,5) => !
+\Gamma(5) => = 24
+\Gamma(\frac{1}{2}) => = \sqrt{\pi}
+\Gamma(-\frac{3}{2}) => = \frac{4\sqrt{\pi}}{3}
+\Gamma(0.3) => ~ 2.9915689876875906283125165159049
+\Gamma(100.7) => ~ 2.3417900214542998912729278940181e157
+\Gamma(-1) => !
+\Gamma(0) => !
+\operatorname{tgamma}(5) => = 24
+\Gamma+\Gamma => = 2\Gamma
+
+## Constants and precision
+\pi => ~ 3.1415926535897932384626433832795
+e => ~ 2.7182818284590452353602874713527
+\exponentialE => ~ 2.7182818284590452353602874713527
+\pi+\pi => = 2\pi
+\pi\cdot\pi => = \pi^{2}
+e\cdot e => = e^{2}
+\frac{\pi}{2} => = \frac{\pi}{2}
+\pi-\pi => = 0
+\pi^{2}
+e^{\pi}
+\pi^{e}
+e^{\pi}-\pi
+\sqrt{\pi}
+@digits 100
+\pi => ~ 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068
+\sqrt{2} => ~ 1.414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641573
+@digits 1000
+\pi
+e
+\sqrt{2}
+\ln(2)
+@digits 16
+\pi => ~ 3.141592653589793
+\frac{1}{3} => ~ 0.3333333333333333
+
+## Trig in radians
+\sin(0) => = 0
+\cos(0) => = 1
+\sin(\pi) => ~ 0
+\cos(\pi) => = -1
+\sin(\frac{\pi}{2}) => = 1
+\sin(\frac{\pi}{6}) => = \frac{1}{2}
+\cos(\frac{\pi}{3}) => = \frac{1}{2}
+\sin(\frac{\pi}{4}) => = \frac{\sqrt{2}}{2}
+\cos(\frac{\pi}{6}) => = \frac{\sqrt{3}}{2}
+\tan(\frac{\pi}{4}) => = 1
+\tan(\frac{\pi}{3}) => = \sqrt{3}
+\tan(\frac{\pi}{2}) => !
+\sin(1) => ~ 0.8414709848078965066525023216303
+\cos(1)
+\tan(1)
+\sin(2\pi)
+\sin(-\frac{\pi}{2}) => = -1
+\sin^{2}(1)+\cos^{2}(1) => ~ 1
+\sin(10^{50}) => ~ -0.78967249342931008271028953991741
+\cos(10^{100})
+\sin(x)^{2}
+\sin^{2}x
+\sin x^{2}
+\sin(\frac{7\pi}{6}) => = -\frac{1}{2}
+\cos(\frac{5\pi}{4}) => = -\frac{\sqrt{2}}{2}
+\sin(\frac{\pi}{12})
+\sin(100\pi) => ~ 0
+
+## Trig in degrees
+@deg
+\sin(30) => = \frac{1}{2}
+\cos(60) => = \frac{1}{2}
+\tan(45) => = 1
+\sin(90) => = 1
+\cos(180) => = -1
+\tan(90) => !
+\sin(45) => = \frac{\sqrt{2}}{2}
+\cos(30) => = \frac{\sqrt{3}}{2}
+\sin(1) => ~ 0.017452406437283512819418978516316
+\sin(390) => = \frac{1}{2}
+\sin(-30) => = -\frac{1}{2}
+\sin^{-1}(0.5) => = 30
+\cos^{-1}(0) => = 90
+\tan^{-1}(1) => = 45
+\arcsin(1) => = 90
+\sin(30°) => = \frac{1}{2}
+\sin(30^{\circ}) => = \frac{1}{2}
+
+## Degree sign in radian mode
+@rad
+\sin(30°) => = \frac{1}{2}
+\cos(60^{\circ}) => = \frac{1}{2}
+180° => = \pi
+90°+90° => = \pi
+
+## Inverse trig
+\arcsin(\frac{1}{2}) => = \frac{\pi}{6}
+\arccos(\frac{1}{2}) => = \frac{\pi}{3}
+\arctan(1) => = \frac{\pi}{4}
+\arctan(\sqrt{3}) => = \frac{\pi}{3}
+\arcsin(-1) => = -\frac{\pi}{2}
+\arccos(-1) => = \pi
+\arcsin(0.3)
+\arctan(100)
+\arcsin(\frac{\sqrt{2}}{2}) => = \frac{\pi}{4}
+
+## Logs and exponentials
+\ln(1) => = 0
+\ln(e) => = 1
+\ln(e^{5}) => = 5
+\log(1000) => = 3
+\log(0.01) => = -2
+\log_{2}(8) => = 3
+\log_{2}(\frac{1}{8}) => = -3
+\log_{8}(2) => = \frac{1}{3}
+\log_{3}(81) => = 4
+\log_{10}(10) => = 1
+\ln(2) => ~ 0.69314718055994530941723212145818
+\ln(10)
+e^{\ln(7)} => = 7
+\exp(0) => = 1
+\exp(1) => ~ 2.7182818284590452353602874713527
+\log_{2}(1024) => = 10
+\ln(0) => !
+\log_{1}(5) => !
+\log_{-2}(5) => !
+\ln(e^{x}) => = x
+2^{\log_{2}(5)}
+\log(2)+\log(5) => ~ 1
+
+## Hyperbolic
+\sinh(0) => = 0
+\cosh(0) => = 1
+\tanh(0) => = 0
+\sinh(1)
+\cosh(1)
+\tanh(1)
+\cosh(1)^{2}-\sinh(1)^{2} => ~ 1
+\operatorname{arsinh}(1)
+\operatorname{arcosh}(2)
+\operatorname{artanh}(0.5)
+\operatorname{artanh}(1) => !
+\sinh^{-1}(1)
+
+## Symbolic algebra
+x+x => = 2x
+3x-x => = 2x
+x-x => = 0
+2x+3y-x+y => = x+4y
+x\cdot x => = x^{2}
+x^{2}x^{3} => = x^{5}
+\frac{x^{5}}{x^{2}} => = x^{3}
+(x^{2})^{3} => = x^{6}
+(2x)^{2} => = 4x^{2}
+\frac{x}{x} => = 1
+1+x+x^{2} => = x^{2}+x+1
+\frac{3x}{4y} => = \frac{3x}{4y}
+\sqrt{4x} => = 2\sqrt{x}
+\sqrt{x}\sqrt{x} => = x
+\theta+\theta => = 2\theta
+x_1+x_1+x_2 => = 2x_{1}+x_{2}
+\alpha\beta\gamma
+abc
+xyz+zyx => = 2xyz
+\frac{1}{x}+\frac{1}{x} => = \frac{2}{x}
+(x+1)(x+1) => = \left(x+1\right)^{2}
+\left|-3x\right| => = 3\left|x\right|
+\frac{x}{0} => !
+x^{0} => = 1
+0x => = 0
+\frac{a}{b}\cdot\frac{b}{a} => = 1
+
+## Expand
+expand((x+1)^{2}) => = x^{2}+2x+1
+expand((x-1)(x+1)) => = x^{2}-1
+expand((a+b)^{3}) => = a^{3}+3a^{2}b+3ab^{2}+b^{3}
+expand((x+1)^{10})
+expand((x+y+z)^{4})
+expand(2(x+3)) => = 2x+6
+expand((\sqrt{2}+1)^{2}) => = 2\sqrt{2}+3
+expand((x+1)^{100})
+expand((a+b+c+d)^{20})
+expand((x+1)^{4000})
+expand((x+1)^{5000}) => ! too large
+expand((x+y+z)^{1000}) => ! too large
+
+## Factor
+factor(x^{2}-1) => = \left(x-1\right)\left(x+1\right)
+factor(x^{2}+2x+1) => = \left(x+1\right)^{2}
+factor(6x^{2}+3x) => = 3x\left(2x+1\right)
+factor(x^{3}-x) => = x\left(x-1\right)\left(x+1\right)
+factor(x^{2}+1) => = x^{2}+1
+factor(x^{2}-5x+6) => = \left(x-3\right)\left(x-2\right)
+factor(2x^{2}-x-1) => = \left(x-1\right)\left(2x+1\right)
+factor(x^{4}-1)
+factor(x^{2}-y^{2})
+factor(x^{6}-1)
+factor(12) => = 2^{2}\cdot 3
+factor(x^{3}+3x^{2}+3x+1) => = \left(x+1\right)^{3}
+factor(x^{200}-1)
+
+## Fractions with letters
+\frac{x^2-1}{x-1} => = x+1
+\frac{x^3+1}{x+1} => = x^{2}-x+1
+\frac{x^2-1}{x^2+2x+1} => = \frac{x-1}{x+1}
+\frac{x}{x^2+x} => = \frac{1}{x+1}
+\frac{2x+4}{6} => = \frac{x+2}{3}
+\frac{3}{6x} => = \frac{1}{2x}
+\frac{x^2-y^2}{x-y} => = x+y
+\frac{x^2y+xy^2}{xy} => = x+y
+\frac{ax+a}{x+1} => = a
+\frac{\sin(x)^2-1}{\sin(x)-1} => = \sin\left(x\right)+1
+\frac{x^3}{x-1} => = \frac{x^{3}}{x-1}
+\frac{d}{dx}\frac{x}{x+1} => = \frac{1}{\left(x+1\right)^{2}}
+simplify(\frac{1}{x}+\frac{1}{x+1}) => = \frac{2x+1}{x\left(x+1\right)}
+simplify(\frac{1}{x-1}-\frac{1}{x+1}) => = \frac{2}{\left(x-1\right)\left(x+1\right)}
+simplify(\frac{x}{x^2-1}+\frac{1}{x+1}) => = \frac{2x-1}{x^{2}-1}
+simplify(x+1) => = x+1
+apart(\frac{1}{x^2-1}) => = \frac{1}{2\left(x-1\right)}-\frac{1}{2\left(x+1\right)}
+apart(\frac{2x+3}{x^2+3x+2}) => = \frac{1}{x+1}+\frac{1}{x+2}
+apart(\frac{1}{x(x+1)^2}) => = \frac{1}{x}-\frac{1}{x+1}-\frac{1}{\left(x+1\right)^{2}}
+apart(\frac{1}{x^3+x}) => = \frac{1}{x}-\frac{x}{x^{2}+1}
+apart(\frac{x^3}{x^2-1}) => = x+\frac{1}{2\left(x+1\right)}+\frac{1}{2\left(x-1\right)}
+apart(\frac{1}{(x-1)^{6}(x+2)^{5}})
+apart(\frac{1}{xy}) => ! one variable
+divide(x^3+1, x-1) => = x^{2}+x+1+\frac{2}{x-1}
+divide(x^4-1, x^2+1) => = x^{2}-1
+quotient(x^3+1, x-1) => = x^{2}+x+1
+remainder(x^3+1, x-1) => = 2
+divide(17,5) => = 17=3\cdot 5+2
+divide(x^{40}-1, x-1)
+divide(x, 0) => ! zero
+divide(x^2+y, x) => ! one variable
+
+## Plain typed text
+sqrt(2)*pi
+sin(30)+cos(60)
+2*3+4 => = 10
+(1+2)*(3+4) => = 21
+pi => ~ 3.1415926535897932384626433832795
+sqrt(16) => = 4
+log(100) => = 2
+ln(1) => = 0
+abs(-4) => = 4
+# LaTeX rule: an unbraced exponent is one character, so this is 2¹·0 (MathLive always braces).
+2^10 => = 0
+3/4 => = \frac{3}{4}
+floor(2.7) => = 2
+ceil(2.1) => = 3
+floor(-2.5) => = -3
+exp(0) => = 1
+
+## MathLive LaTeX shapes
+\frac{1}{3}+\sqrt{2}\cdot\sin\left(\frac{\pi}{6}\right)
+\left(\frac{1}{2}\right)^{2} => = \frac{1}{4}
+\left\vert-3\right\vert => = 3
+\left|\frac{-1}{2}\right| => = \frac{1}{2}
+\operatorname{abs}(-2) => = 2
+\mathrm{e}^{2} => = e^{2}
+\exponentialE^{\ln(3)} => = 3
+1\,000\,000 => = 1\,000\,000
+2\times3 => = 6
+6\div2 => = 3
+\placeholder{}+1 => ! empty box
+\frac{1}{\placeholder{}} => !
+\displaystyle\frac{1}{2} => = \frac{1}{2}
+\dfrac{1}{4} => = \frac{1}{4}
+\left[1+2\right]\cdot3 => = 9
+\lbrace1+1\rbrace => = 2
+
+## Definitions
+x:=5 => = 5
+2x+1 => = 11
+x:=x+1 => = 6
+x => = 6
+y:=2x => = 12
+# x is 6 here, so this equation reads 6 = 5.
+x=5 => = \text{false}
+f(t):=t^{2}+1 => = t^{2}+1
+f(3) => = 10
+f(x) => = 37
+g(t):=f(f(t))
+g(1) => = 5
+area(w,h):=wh
+area(3,4) => = 12
+\phi(t):=2t
+\phi(5) => = 10
+v_{max}:=3
+v_{max}^{2} => = 9
+\theta:=\frac{\pi}{6}
+\sin(\theta) => = \frac{1}{2}
+sin:=3 => ! built in
+xy:=1 => !
+f(1,2) => ! argument
+h(a,b,c):=a+b+c
+h(1,2,3) => = 6
+
+## Complex numbers
+i^{2} => = -1
+i^{3} => = -i
+i^{4} => = 1
+i^{-1} => = -i
+(1+2i)(3-i) => = 5+5i
+(1+i)^{2} => = 2i
+(1+i)^{8} => = 16
+\frac{1}{1+i} => = \frac{1}{2}-\frac{i}{2}
+\frac{1}{i} => = -i
+\frac{2+3i}{1-i} => = -\frac{1}{2}+\frac{5i}{2}
+\sqrt{-4} => = 2i
+\sqrt{-1} => = i
+\sqrt{-2} => = \sqrt{2}i
+\sqrt[4]{-16} => = \sqrt{2}+\sqrt{2}i
+e^{i\pi} => = -1
+e^{i\pi}+1 => = 0
+e^{\frac{i\pi}{2}} => = i
+\ln(-1) => = \pi i
+\ln(i) => = \frac{\pi i}{2}
+\left|3+4i\right| => = 5
+\left|1+i\right| => = \sqrt{2}
+i^{i}
+e^{i}
+\sin(i)
+\cos(i)
+\arcsin(2)
+\arccos(2)
+\ln(-5)
+\log(-100)
+(1+i)^{1000}
+(1+i)^{1000000}
+\sqrt{i}
+i^{\frac{1}{3}}
+(2+3i)^{(1-i)}
+\frac{1}{i-i} => !
+i! => !
+\operatorname{floor}(i) => !
+i_1+i_1 => = 2i_{1}
+\operatorname{conj}(1+i) => = 1-i
+\overline{3+4i} => = 3-4i
+(3+4i)\overline{3+4i} => = 25
+\operatorname{Re}(3+4i) => = 3
+\operatorname{Im}(3+4i) => = 4
+\Re(\frac{1}{1+i}) => = \frac{1}{2}
+\operatorname{Re}(e^{i}) => ~ 0.54030230586813971740093660744298
+\operatorname{Im}(x) => = \operatorname{Im}\left(x\right)
+\arg(1+i) => = \frac{\pi}{4}
+\arg(-1-\sqrt{3}i) => = -\frac{2\pi}{3}
+\arg(-1) => = \pi
+\arg(0) => = 0
+\arg(3+4i) => ~ 0.92729521800161223242851246292243
+polar(1+i) => = \sqrt{2}e^{i\frac{\pi}{4}}
+polar(-3+4i) => = 5e^{i\left(\pi-\arctan\left(\frac{4}{3}\right)\right)}
+polar(-2) => = 2e^{i\pi}
+polar(x) => !
+2\angle\frac{\pi}{3} => = 1+\sqrt{3}i
+2\angle60° => = 1+\sqrt{3}i
+roots(8,3) => = z_{0}=2,\quad z_{1}=-1+\sqrt{3}i,\quad z_{2}=-1-\sqrt{3}i
+roots(3+4i,2) => = z_{0}=2+i,\quad z_{1}=-2-i
+roots(1,1)
+roots(1,100)
+roots(1+i,7)
+roots(10^{100},3)
+roots(8,0) => !
+roots(8,101) => !
+z^{4}=-16 => = z=\sqrt{2}+\sqrt{2}i\quad\text{or}\quad z=-\sqrt{2}+\sqrt{2}i\quad\text{or}\quad z=-\sqrt{2}-\sqrt{2}i\quad\text{or}\quad z=\sqrt{2}-\sqrt{2}i
+x^{4}=-16, x>0 => = \text{no solution}
+
+@deg
+polar(1+i) => = \sqrt{2}\angle 45^{\circ}
+\arg(-1) => = 180
+2\angle60 => = 1+\sqrt{3}i
+
+## Units
+5\,\mathrm{kg}+3\,\mathrm{kg} => = 8\,\mathrm{kg}
+2\,\mathrm{m}\cdot3\,\mathrm{m} => = 6\,\mathrm{m}^{2}
+\frac{100\,\mathrm{km}}{2\,\mathrm{h}} => = 50\,\mathrm{km}/\mathrm{h}
+1\,\mathrm{km}+300\,\mathrm{m} => ~ 1.3 km
+1\,\mathrm{h}+30\,\mathrm{min} => ~ 1.5 h
+60\,\mathrm{mph}\to\mathrm{km/h} => ~ 96.56064 km/h
+60\,\mathrm{mph}\to km/h => ~ 96.56064 km/h
+100\,\mathrm{km/h}\to m/s
+1\,\mathrm{mi}\to km => ~ 1.609344 km
+1\,\mathrm{ft}\to in => ~ 12 in
+6\,\mathrm{ft}\to cm
+1\,\mathrm{lb}\to kg => ~ 0.45359237 kg
+1\,\mathrm{kg}\to lb
+1\,\mathrm{gal}\to L => ~ 3.785411784 L
+1\,\mathrm{atm}\to kPa => ~ 101.325 kPa
+1\,\mathrm{atm}\to psi
+1\,\mathrm{kWh}\to MJ => ~ 3.6 MJ
+1\,\mathrm{kcal}\to kJ => ~ 4.184 kJ
+1\,\mathrm{eV}\to J => ~ 1.602176634e-19 J
+1\,\mathrm{hp}\to W
+1\,\mathrm{yr}\to s => ~ 31557600 s
+1\,\mathrm{ly}\to km
+1\,\mathrm{au}\to km => ~ 149597870.7 km
+2\,\mathrm{kg}\cdot9.81\,\mathrm{m/s^2}\to N => ~ 19.62 N
+5\,\mathrm{N}\,\mathrm{m}\to J => ~ 5 J
+\frac{1\,\mathrm{L}}{1\,\mathrm{cm}^{3}} => = 1\,000
+\sqrt{9\,\mathrm{m}^{2}} => = 3\,\mathrm{m}
+\frac{6\,\mathrm{m}}{2\,\mathrm{m}} => = 3
+1\,\mathrm{\mu m}\to nm => ~ 1000 nm
+2\,\mathrm{k\Omega}\to\Omega => ~ 2000 Ω
+3\,\text{m} => = 3\,\mathrm{m}
+5\,\text{N m}\to J => ~ 5 J
+12\,\mathrm{V}\cdot2\,\mathrm{A}\to W => ~ 24 W
+\frac{12\,\mathrm{V}}{4\,\mathrm{\Omega}}\to A
+1\,\mathrm{Pa}\cdot1\,\mathrm{m}^{3}\to J => ~ 1 J
+5\,\mathrm{kg}+3\,\mathrm{m} => ! add
+1\,\mathrm{m}\to s => ! convert
+5\to\mathrm{m} => ! plain number
+\sin(5\,\mathrm{m}) => ! sin
+2^{\mathrm{m}} => ! exponent
+1\,\mathrm{m}\to xyz => ! Unknown unit
+
+## Temperatures
+20°C\to°F => ~ 68 °F
+20^{\circ}\mathrm{C}\to\mathrm{K} => ~ 293.15 K
+-40°C\to°F => ~ -40 °F
+100°C\to°F => ~ 212 °F
+32°F\to°C => ~ 0 °C
+0\,\mathrm{K}\to°C => ~ -273.15 °C
+300\,\mathrm{K}\to°F => ~ 80.33 °F
+98.6\degree F\to^{\circ}C => ~ 37 °C
+10°C+5°C => ~ 15 °C
+4.18\,\mathrm{J/(g\,°C)}\to\mathrm{J/(kg\,K)} => ~ 4180 J/(K·kg)
+10°C+5\,\mathrm{K} => ! ambiguous
+
+## Units with definitions
+m_{1}:=5\,\mathrm{kg}
+a:=9.81\,\mathrm{m/s^2}
+m_{1}a\to N => ~ 49.05 N
+v:=3\,\mathrm{m/s}
+t:=10\,\mathrm{s}
+vt => = 30\,\mathrm{m}
+\frac{1}{2}m_{1}v^{2}\to J => ~ 22.5 J
+
+## Word problems as maths
+# A car travels 150 km in 2.5 h: average speed?
+\frac{150\,\mathrm{km}}{2.5\,\mathrm{h}} => ~ 60 km/h
+# Area of a circle of radius 3
+\pi\cdot3^{2} => = 9\pi
+# Hypotenuse of a 3-4 triangle
+\sqrt{3^{2}+4^{2}} => = 5
+# Compound interest: 1000 at 5% for 10 years
+1000(1+5\%)^{10}
+# Kinetic energy of 1200 kg at 25 m/s
+\frac{1}{2}\cdot1200\,\mathrm{kg}\cdot(25\,\mathrm{m/s})^{2}\to kJ => ~ 375 kJ
+# Ohm's law
+\frac{9\,\mathrm{V}}{450\,\mathrm{\Omega}}\to mA => ~ 20 mA
+# Quadratic formula pieces for x^2-5x+6
+\frac{5+\sqrt{25-24}}{2} => = 3
+\frac{5-\sqrt{25-24}}{2} => = 2
+# Golden ratio
+\frac{1+\sqrt{5}}{2}
+# Speed of light round trip to the Moon (384400 km at 299792.458 km/s)
+\frac{2\cdot384400\,\mathrm{km}}{299792.458\,\mathrm{km/s}}
+
+## Errors that must be clean
+1/0 => ! Division by zero
+\frac{1}{0} => !
+0^{-1} => !
+2+ => !
++ => !
+() => !
+(1+2 => !
+1+2) => !
+\sqrt{} => !
+\frac{1}{} => !
+1..2 => !
+. => !
+\foo => !
+$ => !
+\infty => ! Infinity
+=> !
+x := => !
+:= 3 => !
+
+## Hostile input
+2^{2^{2^{2^{2}}}}
+2^{2^{2^{2^{2^{2}}}}} => ! too large
+10^{10^{10}} => ! too large
+(\sqrt{2})^{1000000}
+10!!!!
+1000000! => ! limited
+\sin(10^{50})
+\sin(10^{500})
+0^{0}
+\sqrt{\sqrt{\sqrt{\sqrt{\sqrt{\sqrt{\sqrt{\sqrt{2}}}}}}}}
+((((((((((1+1))))))))))
+\frac{1}{\frac{1}{\frac{1}{\frac{1}{\frac{1}{\frac{1}{\frac{1}{2}}}}}}} => = \frac{1}{2}
+x^{x^{x^{x}}}
+e^{e^{e^{e}}}
+\ln(\ln(\ln(\ln(10^{100}))))
+2^{-10000000}
+1.00000000000000000000000000000000000000001^{1000000}
+99999999999999999999999999999999999999^{99}
+\tan(\frac{\pi}{2}+10^{-30})
+factor(x^{100}-y^{100})
+expand((x+y)^{60})
+
+## Zero with units
+0\,\mathrm{m} => = 0\,\mathrm{m}
+0\,\mathrm{m}+5\,\mathrm{m} => = 5\,\mathrm{m}
+0\cdot5\,\mathrm{kg} => = 0\,\mathrm{kg}
+
+## Derivatives
+\frac{d}{dx}x^{2} => = 2x
+\frac{d}{dx}\sin(x) => = \cos\left(x\right)
+\frac{d}{dx}\cos(x) => = -\sin\left(x\right)
+\frac{d}{dx}(x^{3}+2x) => = 3x^{2}+2
+\frac{d}{dx}e^{2x} => = 2e^{2x}
+\frac{d}{dx}\ln(x) => = \frac{1}{x}
+\frac{d^{2}}{dx^{2}}x^{4} => = 12x^{2}
+\frac{d^{3}}{dx^{3}}x^{4} => = 24x
+\frac{d}{dx}\sqrt{x} => = \frac{1}{2\sqrt{x}}
+\frac{d}{dx}x\sin(x) => = x\cos\left(x\right)+\sin\left(x\right)
+\frac{d}{dx}\frac{1}{x} => = -\frac{1}{x^{2}}
+\frac{d}{dx}\sin(x^{2})
+\frac{d}{dx}\tan(x)
+\frac{d}{dx}\arcsin(x)
+\frac{d}{dx}\arctan(x) => = \frac{1}{x^{2}+1}
+\frac{d}{dx}x^{x} => = x^{x}\left(\ln\left(x\right)+1\right)
+\frac{d}{dx}2^{x}
+\frac{d}{dx}\log_{2}(x)
+\frac{d}{dx}\sinh(x) => = \cosh\left(x\right)
+\frac{d}{dx}\left|x\right|
+\frac{d}{dx}\frac{\sin(x)}{x}
+\frac{d}{dx}e^{\sin(x)}
+\frac{d}{dx}\ln(\ln(x))
+\frac{d}{dx}(x^{2}+1)^{10}
+\frac{d}{dt}5t^{3} => = 15t^{2}
+\frac{\mathrm{d}}{\mathrm{d}x}x^{2} => = 2x
+\frac{d}{dx}ax^{2} => = 2ax
+\frac{d}{dx}7 => = 0
+\frac{d^{20}}{dx^{20}}x^{20}
+\frac{d^{10}}{dx^{10}}\sin(x)
+\frac{d}{dx}x! => !
+\frac{d}{dx} => !
+\operatorname{diff}(x^{2},x) => todo
+
+## Derivatives at points and of functions
+f(t):=t^{3}-2t
+f'(2) => = 10
+f''(t) => = 6t
+f^{\prime}(1) => = 1
+x:=3
+\frac{d}{dx}x^{2} => = 6
+\left.\frac{d}{dx}\sin(x)\right|_{x=0} => = 1
+
+## Integrals
+\int x\,dx => = \frac{x^{2}}{2}+C
+\int dx => = x+C
+\int 5\,dx => = 5x+C
+\int x^{3}\,dx => = \frac{x^{4}}{4}+C
+\int\frac{1}{x}\,dx => = \ln\left(\left|x\right|\right)+C
+\int\frac{1}{x^{2}}\,dx => = -\frac{1}{x}+C
+\int\sqrt{x}\,dx
+\int\sin(x)\,dx => = -\cos\left(x\right)+C
+\int\cos(x)\,dx => = \sin\left(x\right)+C
+\int\tan(x)\,dx
+\int e^{x}\,dx => = e^{x}+C
+\int e^{3x}\,dx => = \frac{e^{3x}}{3}+C
+\int 2^{x}\,dx
+\int\ln(x)\,dx => = x\ln\left(x\right)-x+C
+\int\frac{1}{1+x^{2}}\,dx => = \arctan\left(x\right)+C
+\int\frac{1}{\sqrt{1-x^{2}}}\,dx => = \arcsin\left(x\right)+C
+\int\frac{1}{x^{2}+4}\,dx
+\int\frac{1}{x^{2}-4}\,dx
+\int\frac{1}{\sqrt{x^{2}+1}}\,dx
+\int\cos(3x+1)\,dx
+\int(2x+1)^{5}\,dx
+\int x(x+1)^{2}\,dx
+\int 2x\cos(x^{2})\,dx => = \sin\left(x^{2}\right)+C
+\int xe^{x^{2}}\,dx => = \frac{e^{x^{2}}}{2}+C
+\int\sin(x)\cos(x)\,dx => = \frac{\sin^{2}\left(x\right)}{2}+C
+\int\frac{\ln(x)}{x}\,dx => = \frac{\ln^{2}\left(x\right)}{2}+C
+\int\frac{x}{x^{2}+1}\,dx
+\int xe^{x}\,dx => = xe^{x}-e^{x}+C
+\int x^{2}e^{x}\,dx
+\int x\sin(x)\,dx
+\int x\cos(x)\,dx => = x\sin\left(x\right)+\cos\left(x\right)+C
+\int x\ln(x)\,dx
+\int\arctan(x)\,dx
+\int\sinh(x)\,dx => = \cosh\left(x\right)+C
+\int\left|x\right|\,dx
+\int\frac{1}{\cos^{2}(x)}\,dx => = \tan\left(x\right)+C
+\int e^{x^{2}}\,dx => ! antiderivative
+\int\frac{\sin(x)}{x}\,dx => ! antiderivative
+\int\int xy\,dx\,dy => = \frac{x^{2}y^{2}}{4}+C
+\int_{0}^{1}\int_{0}^{2}xy\,dx\,dy => = 1
+\int ax\,dx => = \frac{ax^{2}}{2}+C
+
+## Definite integrals
+\int_{0}^{1}x^{2}\,dx => = \frac{1}{3}
+\int_{0}^{\pi}\sin(x)\,dx => = 2
+\int_{1}^{e}\frac{1}{x}\,dx => = 1
+\int_{0}^{1}e^{x}\,dx
+\int_{0}^{2}x^{3}\,dx => = 4
+\int_{-1}^{1}x^{3}\,dx => = 0
+\int_{0}^{\frac{\pi}{2}}\cos(x)\,dx => = 1
+\int_{0}^{1}\frac{1}{1+x^{2}}\,dx => = \frac{\pi}{4}
+\int_{0}^{a}x\,dx => = \frac{a^{2}}{2}
+\int_{1}^{2}x\ln(x)\,dx
+\int_{0}^{1}x^{1.5}\,dx => = \frac{2}{5}
+\int_{-1}^{1}\frac{1}{x^{2}}\,dx => ! undefined
+\int_{0}^{1}\frac{1}{x}\,dx => ! diverges
+\left.x^{3}\right|_{0}^{2} => = 8
+
+## Numeric integrals
+\int_{0}^{1}e^{-x^{2}}\,dx => ~ 0.74682413281242702539946743613185
+\int_{0}^{2}\sqrt{4-x^{2}}\,dx => ~ 3.1415926535897932384626433832795
+\int_{0}^{\pi}\frac{\sin(x)}{x+1}\,dx
+\int_{0}^{1}\sqrt{x}\sin(x)\,dx
+\int_{0}^{1}x^{x}\,dx
+\int_{1}^{2}\frac{e^{x}}{x}\,dx
+\int_{0}^{10}\sin(x^{2})\,dx
+@digits 100
+\int_{0}^{1}e^{-x^{2}}\,dx
+@digits 16
+\int_{0}^{1}\cos(x^{3})\,dx
+
+## Substitution
+(2x+1)|_{x=3} => = 7
+\left.x^{2}\right|_{x=5} => = 25
+(x+y)|_{x=1,y=2} => = 3
+\sin(x)|_{x=\frac{\pi}{6}} => = \frac{1}{2}
+(x^{2}+y)|_{x=y} => = y^{2}+y
+x=5 => = x=5
+
+## Improper integrals
+\int_{0}^{\infty}e^{-x}\,dx => = 1
+\int_{1}^{\infty}\frac{1}{x^2}\,dx => = 1
+\int_{0}^{\infty}xe^{-x}\,dx => = 1
+\int_{-\infty}^{0}e^{x}\,dx => = 1
+\int_{-\infty}^{\infty}\frac{1}{1+x^2}\,dx => = \pi
+\int_{-\infty}^{\infty}e^{-x^{2}}\,dx => ~ 1.7724538509055160272981674833411
+\int_{0}^{\infty}\frac{1}{(1+x)\sqrt{x}}\,dx => ~ 3.1415926535897932384626433832795
+\int_{1}^{\infty}\frac{1}{x^{1.5}+x}\,dx => ~ 1.3862943611198906188344642429164
+\int_{1}^{\infty}\frac{1}{x}\,dx => ! diverges
+\int_{0}^{\infty}\frac{\sin x}{x}\,dx => ! oscillating
+\int_{0}^{1}\ln x\,dx => = -1
+\int_{0}^{1}\frac{1}{\sqrt{x}}\,dx => = 2
+\int_{0}^{1}\frac{1}{\sqrt{x}+x}\,dx => ~ 1.3862943611198906188344642429164
+\infty+1 => ! Infinity
+\int_{\infty}^{0}e^{-x}\,dx => = -1
+
+## Equations with one unknown
+2x+1=7 => = x=3
+x^{2}=4 => = x=-2\quad\text{or}\quad x=2
+3(x-1)=2x+4 => = x=7
+x^{2}-5x+6=0 => = x=2\quad\text{or}\quad x=3
+x^{2}+1=0 => = x=-i\quad\text{or}\quad x=i
+x^{2}+2x+5=0
+2x^{2}-3x-2=0
+x^{3}-6x^{2}+11x-6=0 => = x=1\quad\text{or}\quad x=2\quad\text{or}\quad x=3
+x^{3}=2 => = x=\sqrt[3]{2}
+x^{4}-5x^{2}+4=0
+x^{5}-x-1=0 => ~ x = 1.1673039782614186842560458998548
+x^{6}=64
+\frac{1}{x}+1=2 => = x=1
+\frac{x}{x-1}=\frac{1}{x-1} => = \text{no solution}
+\frac{1}{x}+\frac{1}{x+1}=1
+e^{x}=5 => = x=\ln\left(5\right)
+2^{x}=8 => = x=3
+10^{x}=0.001
+\ln(x)=2 => = x=e^{2}
+\log_{2}(x)=5
+\sqrt{x}=3 => = x=9
+\sqrt{x}=-3 => = \text{no solution}
+\sqrt{x+1}=x-1 => = x=3
+|x-3|=2 => = x=1\quad\text{or}\quad x=5
+|x|=-1 => = \text{no solution}
+\sin(x)=\frac{1}{2}
+\cos(x)=1
+\tan(x)=1
+\sin(x)=2 => = \text{no solution}
+\sin(2x)=1
+\cos(x)=x => ~ x = 0.73908513321516064165531208767387
+x\cos(x)=1
+e^{x}=x+2
+x^{x}=10
+x+1=x+1 => = \text{true for every x}
+x+1=x+2 => = \text{no solution}
+2+2=4 => = \text{true}
+2+2=5 => = \text{false}
+ax+b=0 => = x=-\frac{b}{a}
+y=2x+1 => = y=2x+1
+x^{2}=a
+x=1=2 => !
+x= => !
+
+## Systems of equations
+x+y=3,x-y=1 => = x=2,\quad y=1
+x+y+z=6;2x-y+z=3;x+2y-z=2 => = x=1,\quad y=2,\quad z=3
+\begin{cases}2x+3y=7\\x-y=1\end{cases} => = x=2,\quad y=1
+x+y=1,x+y=2 => = \text{no solution}
+x+y=1,2x+2y=2 => = x=-y+1,\quad y\text{ free}
+\frac{x}{2}+y=1,x-\frac{y}{3}=\frac{1}{2}
+\sqrt{2}x+y=1,x-\sqrt{2}y=0
+ax+y=1,x+ay=1
+x_{1}+x_{2}=3,x_{2}+x_{3}=5,x_{3}+x_{4}=7,x_{4}+x_{5}=9,x_{5}+x_{6}=11,x_{6}+x_{7}=13,x_{7}+x_{8}=15,x_{8}+x_{9}=17,x_{9}+x_{10}=19,x_{10}=10
+x+y=5,xy=6 => = \left(x,\ y\right)=\left(2,\ 3\right)\quad\text{or}\quad \left(3,\ 2\right)
+x^{2}+y^{2}=25,x-y=1 => = \left(x,\ y\right)=\left(-3,\ -4\right)\quad\text{or}\quad \left(4,\ 3\right)
+y=x^{2},y=x+2
+x^{2}+y^{2}=1,x^{2}-y^{2}=0 => !
+x+y=3,5 => !
+
+## Inequalities and conditions
+x^{2}<4 => = -2<x<2
+x^{2}\ge 9 => = x\le -3\quad\text{or}\quad x\ge 3
+2x+1>7 => = x>3
+\frac{1}{x}>2 => = 0<x<\frac{1}{2}
+\sqrt{x}<3 => = 0\le x<9
+\ln(x)>1 => = x>e
+1<2x+1\le 7 => = 0<x\le 3
+x^{2}+1>0 => = \text{every real }x
+x^{2}<0 => = \text{no solution}
+x^{3}-x>0
+\frac{x-1}{x+2}\ge 0
+|x-1|<3
+2<3 => = \text{true}
+y>x^{2}
+\sin(x)=\frac{1}{2},0\le x\le 2\pi => = x=\frac{\pi}{6}\quad\text{or}\quad x=\frac{5\pi}{6}
+x^{2}=4,x>0 => = x=2
+\tan(x)=1,0\le x\le 10
+x<y< => ! both sides
+
+## Sums and products
+\sum_{k=1}^{100}k => = 5\,050
+\sum_{k=1}^{10^{9}}k => = 500\,000\,000\,500\,000\,000
+\sum_{k=1}^{n}k => = \frac{n\left(n+1\right)}{2}
+\sum_{k=1}^{n}k^2 => = \frac{n\left(2n+1\right)\left(n+1\right)}{6}
+\sum_{k=1}^{n}(2k-1) => = n^{2}
+\sum_{k=0}^{n}3^k => = \frac{3^{n+1}-1}{2}
+\sum_{k=1}^{10}\frac{1}{k} => = \frac{7\,381}{2\,520}
+\sum_{k=0}^{\infty}\frac{1}{2^k} => = 2
+\sum_{k=1}^{\infty}\frac{1}{k^2} => = \frac{\pi^{2}}{6}
+\sum_{k=1}^{\infty}\frac{1}{k^4} => = \frac{\pi^{4}}{90}
+\sum_{k=2}^{\infty}\frac{1}{k^2} => = \frac{\pi^{2}}{6}-1
+\sum_{k=1}^{\infty}\frac{1}{k^3} => ~ 1.2020569031595942853997381615114
+\sum_{k=0}^{\infty}\frac{1}{k!} => ~ 2.7182818284590452353602874713527
+\sum_{k=1}^{\infty}\frac{(-1)^{k+1}}{k} => ~ 0.69314718055994530941723212145818
+\sum_{k=0}^{\infty}\frac{(-1)^k}{2k+1} => ~ 0.78539816339744830961566084581988
+\sum_{k=1}^{\infty}\frac{1}{k^2+1} => ~ 1.07667404746858117413405079475
+\sum_{k=1}^{\infty}\frac{k}{2^k} => ~ 2
+\sum_{k=1}^{20000}\frac{1}{k^2} => ~ 1.6448840680982056031390922499793
+\sum_{k=1}^{10^{6}}\frac{1}{k^2} => ! too many terms
+\sum_{k=1}^{\infty}\frac{1}{k} => ! diverges
+\sum_{k=1}^{\infty}\frac{1}{\sqrt{k}} => ! diverges
+\sum_{k=1}^{\infty}k => = \infty
+\sum_{k=0}^{\infty}2^k => ! diverges
+\sum_{k=1}^{\infty}\frac{1}{k^{1.5}} => ! too slowly
+\sum_{k=5}^{1}k => = 0
+\prod_{k=1}^{5}k => = 120
+\prod_{k=1}^{n}k => = n!
+\prod_{k=1}^{10}(1+\frac{1}{k}) => = 11
+\prod_{k=1}^{\infty}k => ! Infinite products
+
+## Limits
+\lim_{x\to0}\frac{\sin(x)}{x} => = 1
+\lim_{x\to2}x^2+1 => = 5
+\lim_{x\to1}\frac{x^2-1}{x-1} => = 2
+\lim_{x\to0}\frac{1-\cos x}{x^2} => = \frac{1}{2}
+\lim_{x\to0}\frac{\tan x-x}{x^3} => = \frac{1}{3}
+\lim_{x\to0}\frac{e^{x}-1}{x} => = 1
+\lim_{x\to1}\frac{\ln x}{x-1} => = 1
+\lim_{x\to0}\frac{\sin(ax)}{x} => = a
+\lim_{x\to\infty}\frac{2x^2+1}{x^2-3} => = 2
+\lim_{x\to\infty}(1+\frac{1}{x})^{x} => = e
+\lim_{x\to\infty}(1+\frac{2}{x})^{x} => = e^{2}
+\lim_{x\to\infty}\sqrt{x^2+x}-x => = \frac{1}{2}
+\lim_{x\to\infty}\frac{x^{3}}{e^{x}} => = 0
+\lim_{x\to\infty}\frac{\sin x}{x} => = 0
+\lim_{x\to\infty}x\sin(\frac{1}{x}) => = 1
+\lim_{x\to\infty}\arctan x => = \frac{\pi}{2}
+\lim_{x\to\infty}x^{\frac{1}{x}} => = 1
+\lim_{x\to-\infty}e^{x} => = 0
+\lim_{x\to-\infty}xe^{x} => = 0
+\lim_{x\to-\infty}\frac{x^3}{x^2+1} => = -\infty
+\lim_{x\to0^{+}}x\ln x => = 0
+\lim_{x\to0}x^{x} => = 1
+\lim_{x\to0}\frac{1}{x}-\frac{1}{\sin x} => = 0
+\lim_{x\to0}\frac{1}{x^2} => = \infty
+\lim_{x\to0^-}\frac{1}{x} => = -\infty
+\lim_{x\to0}\frac{1}{x} => ! doesn't exist
+\lim_{x\to\infty}\sin x => ! oscillating
+\lim_{x\to0}\frac{\sin x}{x}+1 => = 2
+\lim_{x\to\infty}x+1 => = \infty
+\lim x => ! limit
+\lim_{x\to0} => ! limit
+
+## Taylor series
+taylor(e^{x}) => = \frac{x^{5}}{120}+\frac{x^{4}}{24}+\frac{x^{3}}{6}+\frac{x^{2}}{2}+x+1+\cdots
+taylor(\sin x, 0, 7) => = -\frac{x^{7}}{5\,040}+\frac{x^{5}}{120}-\frac{x^{3}}{6}+x+\cdots
+taylor(\cos x, \pi, 4) => = -\frac{\left(x-\pi\right)^{4}}{24}+\frac{\left(x-\pi\right)^{2}}{2}-1+\cdots
+taylor(\ln(x), 1, 3) => = \frac{\left(x-1\right)^{3}}{3}-\frac{\left(x-1\right)^{2}}{2}+x-1+\cdots
+taylor(\frac{\sin x}{x}, 0, 6) => = -\frac{x^{6}}{5\,040}+\frac{x^{4}}{120}-\frac{x^{2}}{6}+1+\cdots
+taylor(\frac{x}{e^{x}-1}, 0, 6) => = \frac{x^{6}}{30\,240}-\frac{x^{4}}{720}+\frac{x^{2}}{12}-\frac{x}{2}+1+\cdots
+taylor(\tan x,0,7) => = \frac{17x^{7}}{315}+\frac{2x^{5}}{15}+\frac{x^{3}}{3}+x+\cdots
+taylor(e^{t}, t, 0, 3) => = \frac{t^{3}}{6}+\frac{t^{2}}{2}+t+1+\cdots
+taylor(\frac{1}{x}) => ! blows up
+taylor(e^{x}, 0, 50) => ! taylor
+taylor(\tan x, 0, 20)
+
+## Differential equations
+y'=2y => = y=Ce^{2x}
+y'=2y, y(0)=3 => = y=3e^{2x}
+y'+y=x => = y=Ce^{-x}+x-1
+y'+y=x, y(0)=1 => = y=x+2e^{-x}-1
+y'+2y=4 => = y=Ce^{-2x}+2
+xy'+y=x^2 => = y=\frac{x^{2}}{3}+\frac{C}{x}
+\frac{dy}{dx}=xy => = y=Ce^{\frac{x^{2}}{2}}
+\frac{d}{dx}y=3y => = y=Ce^{3x}
+y'=ky => = y=Ce^{kx}
+y'=ky, y(0)=y_0 => = y=y_{0}e^{kx}
+y'=ty => = y=Ce^{\frac{t^{2}}{2}}
+y'=\frac{x}{y} => = y=-\sqrt{x^{2}+2C}\quad\text{or}\quad y=\sqrt{x^{2}+2C}
+y'=\frac{x}{y}, y(0)=2 => = y=\sqrt{x^{2}+4}
+y'=y^2 => = y=\frac{1}{-C-x}
+y'=e^{x+y} => = y=-\ln\left(-C-e^{x}\right)
+y'=\cos x => = y=C+\sin\left(x\right)
+y''+y=0 => = y=C_{1}\cos\left(x\right)+C_{2}\sin\left(x\right)
+y''+y=0, y(0)=0, y'(0)=1 => = y=\sin\left(x\right)
+y''-3y'+2y=0 => = y=C_{1}e^{x}+C_{2}e^{2x}
+y''+2y'+y=0 => = y=C_{2}xe^{-x}+C_{1}e^{-x}
+y''+4y=\sin x => = y=C_{1}\cos\left(2x\right)+C_{2}\sin\left(2x\right)+\frac{\sin\left(x\right)}{3}
+y''-y=e^{x} => = y=C_{1}e^{x}+C_{2}e^{-x}+\frac{xe^{x}}{2}
+y''+y=x^2 => = y=C_{1}\cos\left(x\right)+C_{2}\sin\left(x\right)+x^{2}-2
+y''+4y'+13y=0, y(0)=1, y'(0)=0 => = y=e^{-2x}\cos\left(3x\right)+\frac{2e^{-2x}\sin\left(3x\right)}{3}
+y''+\omega^2y=0 => = y=C_{1}\cos\left(\omega x\right)+C_{2}\sin\left(\omega x\right)
+y''+\omega^2y=0, y(0)=A, y'(0)=0 => = y=A\cos\left(\omega x\right)
+\frac{d^2y}{dt^2}+9y=0 => = y=C_{1}\cos\left(3t\right)+C_{2}\sin\left(3t\right)
+y'''-y=0
+y''''+4y=0
+y''+y=e^{x}\sin x
+y''+y=\tan x => ! numerically
+y'=\sin(xy), y(0)=1
+y''=-\sin y, y(0)=1, y'(0)=0
+y'=x+y^2 => ! numerically
+y'=2y, y(0)=1, y'(0)=2 => ! first-order
+y'=2y, z(0)=1 => ! initial condition
+y'=2y, y'=3y => ! one differential equation
+y^{(9)}=y
+
+## Optimisation
+minimize(x^2-4x+7) => = \min\ f=3\ \text{at}\ x=2
+maximize(-x^2+6x) => = \max\ f=9\ \text{at}\ x=3
+minimize(x e^{x}) => = \min\ f=-\frac{1}{e}\ \text{at}\ x=-1
+extrema(x^3-3x) => = \text{max}\ f=2\ \text{at}\ x=-1,\quad \text{min}\ f=-2\ \text{at}\ x=1
+extrema(x^3) => = \text{inflection}\ f=0\ \text{at}\ x=0
+maximize(x^2) => ! no maximum
+maximize(\sin x) => ! interval
+minimize(x^3-3x, -3, 3) => = \min\ f=-18\ \text{at}\ x=-3\quad\left(-3\le x\le 3\right)
+maximize(\sin x, 0 \le x \le 2\pi) => = \max\ f=1\ \text{at}\ x=\frac{\pi}{2}\quad\left(0\le x\le 2\pi\right)
+extrema(\cos x, 0 \le x \le 10\pi)
+minimize(x^2+y^2-2x+4y) => = \min\ f=-5\ \text{at}\ \left(x,y\right)=\left(1,-2\right)\quad\left(\text{local}\right)
+extrema(x^3-3xy+y^3) => = \text{saddle}\ f=0\ \text{at}\ \left(x,y\right)=\left(0,0\right),\quad \text{min}\ f=-1\ \text{at}\ \left(x,y\right)=\left(1,1\right)
+maximize(xy, x+y=10) => = \max\ f=25\ \text{at}\ \left(x,y\right)=\left(5,5\right)\quad\left(x+y=10\right)
+maximize(x+y, x^2+y^2=1) => = \max\ f=\sqrt{2}\ \text{at}\ \left(x,y\right)=\left(\frac{\sqrt{2}}{2},\frac{\sqrt{2}}{2}\right)\quad\left(x^{2}+y^{2}=1\right)
+minimize(x^2+y^2+z^2, x+2y+3z=14) => = \min\ f=14\ \text{at}\ \left(x,y,z\right)=\left(1,2,3\right)\quad\left(x+2y+3z=14\right)
+minimize(x^{10}-x)
+minimize(5) => ! no variable
+2\cdot minimize(x^2-4x+7) => = 6
+
+## Geometry
+triangle(a=3, b=4, c=5)
+triangle(a=5, A=30°, B=60°) => = a=5,\quad b=5\sqrt{3},\quad c=10,\quad A=\frac{\pi}{6},\quad B=\frac{\pi}{3},\quad C=\frac{\pi}{2},\quad \text{area}=\frac{25\sqrt{3}}{2},\quad \text{perimeter}=5\sqrt{3}+15
+triangle(a=1, b=1, c=1) => = a=1,\quad b=1,\quad c=1,\quad A=\frac{\pi}{3},\quad B=\frac{\pi}{3},\quad C=\frac{\pi}{3},\quad \text{area}=\frac{\sqrt{3}}{4},\quad \text{perimeter}=3
+triangle(a=6, b=8, A=30°)
+triangle(a=2, b=8, A=30°) => ! No triangle
+triangle(a=1, b=2, c=5) => ! No triangle
+triangle(A=30°, B=60°, C=90°) => ! side
+triangle(a=3) => ! three parts
+circle(r=2) => = A=4\pi,\quad C=4\pi,\quad r=2,\quad d=4
+circle(d=10) => = A=25\pi,\quad C=10\pi,\quad r=5,\quad d=10
+rectangle(w=3, h=4) => = A=12,\quad P=14,\quad d=5
+trapezoid(a=3, b=5, h=2) => = A=8
+sphere(r=3) => = V=36\pi,\quad S=36\pi
+cylinder(r=1, h=2) => = V=2\pi,\quad S=6\pi
+cone(r=3, h=4) => = V=12\pi,\quad l=5,\quad S=24\pi
+cube(2) => = V=8,\quad S=24,\quad d=2\sqrt{3}
+cuboid(l=2, w=3, h=6) => = V=36,\quad S=72,\quad d=7
+distance([1,2],[4,6]) => = d=5
+midpoint([1,2],[3,8]) => = M=\begin{pmatrix}2\\5\end{pmatrix}
+slope([1,2],[3,8]) => = m=3
+line([1,2],[3,8]) => = y=3x-1,\quad m=3,\quad b=-1
+line([1,2],[1,5]) => = x=1
+angle([1,0],[1,1]) => = \theta=\frac{\pi}{4}
+polygon([0,0],[4,0],[4,3]) => = A=6,\quad P=12
+circle(r=-1) => ! positive
+2\cdot circle(r=1) => = 2\pi
+
+## Statistics and probability
+mean([2,4,4,4,5,5,7,9]) => = 5
+mean(1,2,3,4) => = \frac{5}{2}
+median([3,1,4,1,5,9,2,6]) => = \frac{7}{2}
+mode([1,2,2,3,3,3]) => = 3
+mode([1,2,3]) => ! no mode
+var([2,4,4,4,5,5,7,9]) => = \frac{32}{7}
+pvar([2,4,4,4,5,5,7,9]) => = 4
+sd([2,4,4,4,5,5,7,9]) => = \frac{4\sqrt{14}}{7}
+psd([2,4,4,4,5,5,7,9]) => = 2
+range([3,1,4,1,5]) => = 4
+quartile([1,2,3,4,5,6,7,8,9],1) => = \frac{5}{2}
+iqr([1,2,3,4,5,6,7,8]) => = 4
+percentile([1,2,3,4,5],90) => = \frac{23}{5}
+corr([1,2,3,4],[2,4,5,9]) => = \frac{11\sqrt{130}}{130}
+linreg([1,2,3,4],[2,4,5,9]) => = y=\frac{11x}{5}-\frac{1}{2},\quad a=-\frac{1}{2},\quad b=\frac{11}{5},\quad r=\frac{11\sqrt{130}}{130},\quad r^{2}=\frac{121}{130}
+stats([2,4,4,4,5,5,7,9])
+mean([0.1,0.2,0.3]) => = \frac{1}{5}
+sd([1,1,1]) => = 0
+var([5]) => ! at least 2
+binompdf(10,0.5,3) => = \frac{15}{128}
+binomcdf(10,\frac{1}{2},3) => = \frac{11}{64}
+binompdf(100,0.3,30)
+binomcdf(1000,0.5,500)
+poissonpdf(2,3) => = \frac{4}{3e^{2}}
+poissoncdf(2,3) => = \frac{19}{3e^{2}}
+geompdf(\frac{1}{6},3) => = \frac{25}{216}
+normalpdf(0) => ~ 0.39894228040143267793994605993438
+normalcdf(-1,1) => ~ 0.68268949213708589717046509126408
+normalcdf(-1.96,1.96) => ~ 0.95000420970355913172683146191833
+normalcdf(-10^{99},1.645) => ~ 0.95001509446087863472188079765139
+normalcdf(5,10^{99})
+invnorm(0.975) => ~ 1.9599639845400542355245944305206
+invnorm(0.95,100,15) => ~ 124.67280440427209072295773361987
+invnorm(10^{-10})
+invnorm(0) => ! between 0 and 1
+\operatorname{erf}(1) => ~ 0.84270079294971486934122063508261
+\operatorname{erf}(30)
+\operatorname{erf}(-0.5) => ~ -0.52049987781304653768274665389196
+binompdf(10,2,3) => ! between 0 and 1
+1\,\mathrm{h}+30\,\mathrm{min} => = \frac{3}{2}\,\mathrm{h}
+
+## Matrices and vectors
+\begin{pmatrix}1&2\\3&4\end{pmatrix} => = \begin{pmatrix}1&2\\3&4\end{pmatrix}
+\begin{bmatrix}1&2\\3&4\end{bmatrix} => = \begin{pmatrix}1&2\\3&4\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\\\end{pmatrix} => = \begin{pmatrix}1&2\\3&4\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\end{pmatrix}+\begin{pmatrix}1&0\\0&1\end{pmatrix} => = \begin{pmatrix}2&2\\3&5\end{pmatrix}
+2\begin{pmatrix}1&2\\3&4\end{pmatrix} => = \begin{pmatrix}2&4\\6&8\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}5\\6\end{pmatrix} => = \begin{pmatrix}17\\39\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}0&1\\1&0\end{pmatrix} => = \begin{pmatrix}2&1\\4&3\end{pmatrix}
+\begin{pmatrix}0&1\\1&0\end{pmatrix}\begin{pmatrix}1&2\\3&4\end{pmatrix} => = \begin{pmatrix}3&4\\1&2\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\end{pmatrix}^{-1} => = \begin{pmatrix}-2&1\\\frac{3}{2}&-\frac{1}{2}\end{pmatrix}
+\begin{pmatrix}1&2\\3&4\end{pmatrix}^{T} => = \begin{pmatrix}1&3\\2&4\end{pmatrix}
+\begin{pmatrix}1&1\\1&0\end{pmatrix}^{10} => = \begin{pmatrix}89&55\\55&34\end{pmatrix}
+\begin{pmatrix}1&1\\1&0\end{pmatrix}^{1000}
+\det\begin{pmatrix}1&2\\3&4\end{pmatrix} => = -2
+\left|\begin{pmatrix}1&2\\3&4\end{pmatrix}\right| => = -2
+\begin{vmatrix}2&0&1\\1&3&2\\1&1&4\end{vmatrix} => = 18
+det(\begin{pmatrix}1&2&3&4\\5&6&7&8\\2&6&4&8\\3&1&1&2\end{pmatrix}) => = 72
+\det\begin{pmatrix}x&1\\1&x\end{pmatrix} => = x^{2}-1
+\det\begin{pmatrix}x&1\\1&x\end{pmatrix}=0 => = x=-1\quad\text{or}\quad x=1
+inv(\begin{pmatrix}2&1&1\\1&3&2\\1&0&0\end{pmatrix}) => = \begin{pmatrix}0&0&1\\-2&1&3\\3&-1&-5\end{pmatrix}
+\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1} => = \begin{pmatrix}\frac{d}{ad-bc}&-\frac{b}{ad-bc}\\-\frac{c}{ad-bc}&\frac{a}{ad-bc}\end{pmatrix}
+\begin{pmatrix}1&2\\2&4\end{pmatrix}^{-1} => ! no inverse
+rref(\begin{pmatrix}1&2&3\\4&5&6\\7&8&9\end{pmatrix}) => = \begin{pmatrix}1&0&-1\\0&1&2\\0&0&0\end{pmatrix}
+rank(\begin{pmatrix}1&2&3\\4&5&6\\7&8&9\end{pmatrix}) => = 2
+trace(\begin{pmatrix}1&2\\3&4\end{pmatrix}) => = 5
+identity(3) => = \begin{pmatrix}1&0&0\\0&1&0\\0&0&1\end{pmatrix}
+eigenvalues(\begin{pmatrix}2&1\\1&2\end{pmatrix}) => = \lambda_{1}=1,\quad \lambda_{2}=3
+eigenvalues(\begin{pmatrix}0&-1\\1&0\end{pmatrix}) => = \lambda_{1}=-i,\quad \lambda_{2}=i
+eigenvectors(\begin{pmatrix}2&1\\1&2\end{pmatrix}) => = \lambda_{1}=1:\ \begin{pmatrix}-1\\1\end{pmatrix},\quad \lambda_{2}=3:\ \begin{pmatrix}1\\1\end{pmatrix}
+eigenvalues(\begin{pmatrix}1&2&3\\4&5&6\\7&8&10\end{pmatrix})
+det(identity(12))
+inv(identity(12))
+\frac{d}{dx}\begin{pmatrix}x^2&\sin x\\1&e^x\end{pmatrix} => = \begin{pmatrix}2x&\cos\left(x\right)\\0&e^{x}\end{pmatrix}
+[1,2,3]\cdot[4,5,6] => = 32
+[1,0,0]\times[0,1,0] => = \begin{pmatrix}0\\0\\1\end{pmatrix}
+cross([1,2,3],[4,5,6]) => = \begin{pmatrix}-3\\6\\-3\end{pmatrix}
+|[3,4]| => = 5
+norm([1,1,1]) => = \sqrt{3}
+\langle 1,2\rangle+\langle 3,4\rangle => = \begin{pmatrix}4\\6\end{pmatrix}
+2\times3 => = 6
+\begin{pmatrix}1&2\end{pmatrix}+\begin{pmatrix}1\\2\end{pmatrix} => ! Can't add
+\begin{pmatrix}1&2\\3\end{pmatrix} => ! same number
+\sin(\begin{pmatrix}1&2\\3&4\end{pmatrix}) => ! isn't supported
+\det\begin{pmatrix}1&2\end{pmatrix} => ! square
+identity(13) => ! identity
+cross([1,2],[3,4]) => ! 3 entries

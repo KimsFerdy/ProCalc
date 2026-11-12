@@ -120,7 +120,8 @@ fn exact_inverse_trig() {
     assert_eq!(sym("\\arcsin(-1)"), "-\\frac{\\pi}{2}");
     assert_eq!(sym("\\arccos(-\\frac{1}{2})"), "\\frac{2\\pi}{3}");
     assert_eq!(sym_deg("\\arccos(\\frac{\\sqrt{3}}{2})"), "30");
-    assert!(evaluate("\\arcsin(2)", &Settings::default()).is_err());
+    // arcsin 2 is complex now: see tests_complex::functions_beyond_the_real_domain.
+    assert!(no_exact("\\arcsin(2)"));
 }
 
 #[test]
@@ -184,7 +185,7 @@ fn symbolic_errors() {
     assert!(evaluate("\\frac{x}{0}", &s).is_err());
     assert!(evaluate("\\ln(0)", &s).is_err());
     assert!(evaluate("\\log_{1}(x)", &s).is_err());
-    assert!(evaluate("\\sqrt{-4}", &s).is_err());
+    assert!(evaluate("\\frac{x}{i-i}", &s).is_err());
 }
 
 /// The decimal from the symbolic path must match direct numeric evaluation digit for digit.
@@ -308,8 +309,7 @@ fn factor_treats_functions_as_variables() {
 }
 
 #[test]
-fn factor_numbers_are_unchanged() {
-    assert_eq!(sym("factor(12)"), "12");
+fn factor_leaves_symbols_alone() {
     assert_eq!(sym("factor(x)"), "x");
 }
 
@@ -340,4 +340,59 @@ fn factor_round_trips_through_latex() {
         let back = sym(&format!("expand({factored})"));
         assert_eq!(back, expanded, "{product} factored as {factored}");
     }
+}
+
+#[test]
+fn fractions_with_letters_cancel() {
+    assert_eq!(sym("\\frac{x^2-1}{x-1}"), "x+1");
+    assert_eq!(sym("\\frac{x^3+1}{x+1}"), "x^{2}-x+1");
+    assert_eq!(sym("\\frac{x^2-1}{x^2+2x+1}"), "\\frac{x-1}{x+1}");
+    assert_eq!(sym("\\frac{x}{x^2+x}"), "\\frac{1}{x+1}");
+    assert_eq!(sym("\\frac{2x+4}{6}"), "\\frac{x+2}{3}");
+    // Several letters: exact division by the factors.
+    assert_eq!(sym("\\frac{x^2-y^2}{x-y}"), "x+y");
+    assert_eq!(sym("\\frac{x^2y+xy^2}{xy}"), "x+y");
+    assert_eq!(sym("\\frac{ax+a}{x+1}"), "a");
+    // Nothing in common: left as written.
+    assert_eq!(sym("\\frac{x^3}{x-1}"), "\\frac{x^{3}}{x-1}");
+    assert_eq!(sym("\\frac{1}{x}+\\frac{1}{x+1}"), "\\frac{1}{x+1}+\\frac{1}{x}");
+    // A plain number below doesn't count as a common factor.
+    assert_eq!(sym("taylor(\\cos x, \\pi, 2)"), "\\frac{\\left(x-\\pi\\right)^{2}}{2}-1+\\cdots");
+    let a = evaluate("\\frac{x^2-1}{x-1}", &Settings::default()).unwrap();
+    assert_eq!(a.methods[0].name, "Simplify");
+}
+
+#[test]
+fn simplify_combines_fractions() {
+    assert_eq!(sym("simplify(\\frac{1}{x}+\\frac{1}{x+1})"), "\\frac{2x+1}{x\\left(x+1\\right)}");
+    assert_eq!(sym("simplify(\\frac{1}{x-1}-\\frac{1}{x+1})"), "\\frac{2}{\\left(x-1\\right)\\left(x+1\\right)}");
+    assert_eq!(sym("simplify(\\frac{x}{x^2-1}+\\frac{1}{x+1})"), "\\frac{2x-1}{x^{2}-1}");
+}
+
+#[test]
+fn partial_fractions() {
+    assert_eq!(sym("apart(\\frac{1}{x^2-1})"), "\\frac{1}{2\\left(x-1\\right)}-\\frac{1}{2\\left(x+1\\right)}");
+    assert_eq!(sym("apart(\\frac{2x+3}{x^2+3x+2})"), "\\frac{1}{x+1}+\\frac{1}{x+2}");
+    // Repeated and quadratic factors.
+    assert_eq!(sym("apart(\\frac{1}{x(x+1)^2})"), "\\frac{1}{x}-\\frac{1}{x+1}-\\frac{1}{\\left(x+1\\right)^{2}}");
+    assert_eq!(sym("apart(\\frac{1}{x^3+x})"), "\\frac{1}{x}-\\frac{x}{x^{2}+1}");
+    // Divide first when the top's degree is high.
+    assert_eq!(sym("apart(\\frac{x^3}{x^2-1})"), "x+\\frac{1}{2\\left(x+1\\right)}+\\frac{1}{2\\left(x-1\\right)}");
+    assert!(evaluate("apart(\\frac{1}{xy})", &Settings::default()).is_err());
+    let a = evaluate("apart(\\frac{1}{x^2-1})", &Settings::default()).unwrap();
+    assert_eq!(a.methods[0].name, "Partial fractions");
+}
+
+#[test]
+fn polynomial_long_division() {
+    let s = Settings::default();
+    let a = evaluate("divide(x^3+1, x-1)", &s).unwrap();
+    assert_eq!(a.exact_latex.unwrap(), "x^{2}+x+1+\\frac{2}{x-1}");
+    assert_eq!(a.decimal.unwrap().text, "quotient x^{2}+x+1, remainder 2");
+    assert_eq!(a.methods[0].name, "Long division");
+    assert_eq!(sym("quotient(x^3+1, x-1)"), "x^{2}+x+1");
+    assert_eq!(sym("remainder(x^4-1, x^2+1)"), "0");
+    assert_eq!(evaluate("divide(17, 5)", &s).unwrap().exact_latex.unwrap(), "17=3\\cdot 5+2");
+    assert!(evaluate("divide(x^2+y, x)", &s).is_err());
+    assert!(evaluate("divide(x, 0)", &s).is_err());
 }

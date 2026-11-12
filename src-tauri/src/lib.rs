@@ -39,12 +39,33 @@ fn write_project(path: String, contents: String) -> Result<(), String> {
     std::fs::rename(&tmp, &path).map_err(|e| format!("Couldn't save {path}: {e}"))
 }
 
+/// True for the portable zips, which ship a `portable` file next to the program. They can't
+/// update themselves (an installer would put a second copy elsewhere), so the app offers a
+/// download instead.
+#[tauri::command]
+fn is_portable() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("portable").exists()))
+        .unwrap_or(false)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![evaluate, evaluate_sheet, plot_sheet, solve_figure, read_project, write_project])
+        .invoke_handler(tauri::generate_handler![
+            evaluate,
+            evaluate_sheet,
+            plot_sheet,
+            solve_figure,
+            read_project,
+            write_project,
+            is_portable
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

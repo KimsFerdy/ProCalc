@@ -33,5 +33,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg5QUQwNDNFMDZDMDM0NzAKUldSd05NQUdQZ1N0aWZGSG9XWUVsbXdHSlhhaEhhb1VxenhtL0szanRsa056UGpya2g4dVdNR2sK",
+      "endpoints": [
+        "https://github.com/KimsFerdy/ProCalc/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

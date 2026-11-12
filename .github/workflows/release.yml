@@ -28,6 +28,7 @@ jobs:
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
       version: ${{ steps.create.outputs.version }}
+      notes: ${{ steps.create.outputs.notes }}
     steps:
       - uses: actions/checkout@v5
       - id: create
@@ -35,10 +36,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           version="${TAG#v}"
+          # "What's new" comes from .github/changes/<tag>.md when there is one; the app's
+          # update dialog shows that section.
+          {
+            if [ -f ".github/changes/$TAG.md" ]; then
+              echo "## What's new"; echo; cat ".github/changes/$TAG.md"; echo
+            fi
+            cat .github/release-notes.md
+          } > notes.md
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --draft --title "ProCalc $version" \
-              --notes-file .github/release-notes.md --target "$GITHUB_SHA"
+              --notes-file notes.md --target "$GITHUB_SHA"
           fi
+          {
+            echo "notes<<NOTES_EOF"; cat notes.md; echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "release_id=$(gh release view "$TAG" --json databaseId -q .databaseId)" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -75,12 +87,18 @@ jobs:
 
       - run: npm ci
 
+      # Also signs every installer for the in-app updater and uploads latest.json, which
+      # installed copies read to find new versions.
       - name: Build and upload installers
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
+          releaseBody: ${{ needs.create-release.outputs.notes }}
+          args: --config src-tauri/tauri.release.conf.json
 
       - name: Portable zip (Windows)
         if: matrix.os == 'windows'
@@ -93,6 +111,8 @@ jobs:
           New-Item -ItemType Directory $dir | Out-Null
           Copy-Item target/release/procalc.exe "$dir/ProCalc.exe"
           Copy-Item LICENSE, README.md $dir
+          # Tells the app it's portable: it offers a download instead of running an installer.
+          New-Item "$dir/portable" -ItemType File | Out-Null
           Compress-Archive -Path $dir -DestinationPath "$dir.zip"
           gh release upload $env:TAG "$dir.zip" --clobber
 
@@ -107,6 +127,7 @@ jobs:
           cp target/release/procalc "$dir/procalc"
           chmod +x "$dir/procalc"
           cp LICENSE README.md "$dir/"
+          touch "$dir/portable"
           zip -r "$dir.zip" "$dir"
           tar -czf "$dir.tar.gz" "$dir"
           gh release upload "$TAG" "$dir.zip" "$dir.tar.gz" --clobber

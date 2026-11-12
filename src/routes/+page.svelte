@@ -4,6 +4,8 @@
   import Paper from "$lib/Paper.svelte";
   import Geometry from "$lib/Geometry.svelte";
   import { ask } from "@tauri-apps/plugin-dialog";
+  import UpdateDialog from "$lib/UpdateDialog.svelte";
+  import { formatBytes, updates } from "$lib/updates.svelte";
   import {
     chooseOpenPath,
     chooseSavePath,
@@ -126,6 +128,7 @@
   onMount(() => {
     load();
     recent = recentProjects();
+    updates.start();
     (async () => {
       const ml = await import("mathlive");
       // Fonts come from the bundled CSS; don't let MathLive fetch them itself.
@@ -294,6 +297,27 @@
     });
   }
 
+  /** Before an update restarts the app: save a project that has a file, else ask. */
+  async function beforeUpdate(): Promise<boolean> {
+    if (!dirty) return true;
+    if (projectPath) {
+      clearTimeout(autosaveTimer);
+      try {
+        await writeTo(projectPath);
+        return true;
+      } catch (e) {
+        show(String(e instanceof Error ? e.message : e));
+        return false;
+      }
+    }
+    return await ask("This project hasn't been saved. Update and restart anyway, losing it?", {
+      title: "Unsaved changes",
+      kind: "warning",
+      okLabel: "Update anyway",
+      cancelLabel: "Not now",
+    });
+  }
+
   async function newProject() {
     fileOpen = false;
     if (!(await confirmDiscard())) return;
@@ -369,6 +393,15 @@
     lengthUnit = (e.target as HTMLSelectElement).value;
     save();
     projectChanged();
+  }
+
+  function lastCheckedText(t: number) {
+    const mins = Math.round((Date.now() - t) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    return new Date(t).toLocaleDateString();
   }
 
   /** "=" for exact decimals, "≈" for rounded ones. */
@@ -545,8 +578,62 @@
           {/each}
         </select>
       </div>
+
+      <h3 class="setting-group">Updates</h3>
+      <div class="setting">
+        <div class="setting-text">
+          <span class="setting-name">ProCalc {updates.version || ""}</span>
+          <span class="setting-help update-status" class:err={updates.status.kind === "error"} role="status">
+            {#if updates.status.kind === "checking"}
+              Checking for updates…
+            {:else if updates.status.kind === "current"}
+              ✓ You have the latest version
+            {:else if updates.status.kind === "available" && updates.update}
+              Version {updates.update.version} is available
+            {:else if updates.status.kind === "downloading"}
+              Downloading update… {formatBytes(updates.status.done)}
+            {:else if updates.status.kind === "restarting"}
+              Restarting…
+            {:else if updates.status.kind === "error"}
+              {updates.status.message}
+            {:else if updates.lastChecked}
+              Last checked {lastCheckedText(updates.lastChecked)}
+            {:else}
+              Not checked yet
+            {/if}
+          </span>
+        </div>
+        {#if updates.status.kind === "available" && updates.update}
+          <button class="ghost" onclick={() => (updates.prompt = true)}>{updates.portable ? "Download…" : "Install…"}</button>
+        {:else}
+          <button
+            class="ghost"
+            disabled={updates.status.kind === "checking" || updates.status.kind === "downloading" || !updates.version}
+            onclick={() => updates.checkNow(true)}
+          >Check now</button>
+        {/if}
+      </div>
+      <div class="setting">
+        <div class="setting-text">
+          <span class="setting-name">Check automatically</span>
+          <span class="setting-help">
+            {#if updates.portable}
+              Looks for a new version when ProCalc starts. This portable copy can't install updates itself, so you'll get a download link.
+            {:else}
+              Looks for a new version when ProCalc starts and offers to install it. Nothing is installed without asking.
+            {/if}
+          </span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" checked={updates.auto} onchange={(e) => updates.setAuto((e.target as HTMLInputElement).checked)} />
+          <span class="track" aria-hidden="true"></span>
+          <span class="sr-only">Check for updates automatically</span>
+        </label>
+      </div>
     </div>
   </dialog>
+
+  <UpdateDialog beforeInstall={beforeUpdate} />
 
   {#if toast}
     <div class="toast" role="status">{toast}</div>
@@ -904,6 +991,89 @@
   .setting-help {
     color: var(--muted);
     font-size: 12.5px;
+  }
+
+  .setting-group {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .setting-group + .setting {
+    border-top: none;
+  }
+
+  .update-status.err {
+    color: var(--err);
+  }
+
+  .setting .ghost:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .switch {
+    position: relative;
+    flex: none;
+    cursor: pointer;
+  }
+
+  .switch input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .switch .track {
+    display: block;
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--line);
+    transition: background 150ms;
+  }
+
+  .switch .track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    transition: transform 150ms;
+  }
+
+  .switch input:checked + .track {
+    background: var(--accent);
+  }
+
+  .switch input:checked + .track::after {
+    transform: translateX(16px);
+    background: var(--accent-ink);
+  }
+
+  .switch input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .toast {

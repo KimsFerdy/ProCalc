@@ -11,6 +11,9 @@ for students, teachers, engineers and mathematicians alike.
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational)
 ![Built with Rust](https://img.shields.io/badge/engine-Rust-orange)
 ![Tauri](https://img.shields.io/badge/app-Tauri%202%20%2B%20Svelte%205-24C8DB)
+[![Latest release](https://img.shields.io/github/v/release/KimsFerdy/ProCalc)](https://github.com/KimsFerdy/ProCalc/releases/latest)
+
+**[⬇ Download for Windows or Linux](https://github.com/KimsFerdy/ProCalc/releases/latest)**
 
 </div>
 
@@ -86,10 +89,19 @@ calculates.
 There is also a **Geometry** workspace: sketch a triangle, polygon or circle, type in the
 measurements you know, and ProCalc finds the rest and redraws the figure to scale.
 
-## Getting started
+## Download
 
-ProCalc is a desktop app for Windows and Linux. macOS should work but hasn't been tested yet.
-For now it is built from source.
+Get the latest version from the **[Releases page](https://github.com/KimsFerdy/ProCalc/releases/latest)**.
+
+| System | Recommended | Also available |
+|---|---|---|
+| **Windows 10 / 11** | `…_x64-setup.exe` | `.msi` installer, portable `.zip` (no install) |
+| **Linux** | `.AppImage` (any distribution) | `.deb` (Ubuntu, Mint, Debian), `.rpm` (Fedora, openSUSE), portable `.zip` / `.tar.gz` |
+
+The Windows build isn't code-signed yet, so SmartScreen may warn you: choose
+**More info → Run anyway**. macOS should work when built from source but hasn't been tested.
+
+## Building from source
 
 **You'll need:**
 

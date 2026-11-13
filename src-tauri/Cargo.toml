@@ -1,6 +1,6 @@
 [package]
 name = "procalc"
-version = "0.2.0"
+version = "0.3.0"
 description = "ProCalc: a deep calculator for maths, physics, engineering and chemistry"
 authors = ["kimsferdinand"]
 edition = "2024"

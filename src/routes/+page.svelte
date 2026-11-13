@@ -549,7 +549,7 @@
         History{#if history.length}<span class="count" class:pulse={justPinned}>{history.length}</span>{/if}
       </button>
       <button class="info" onclick={() => settingsDialog?.showModal()} title="Settings" aria-label="Settings">⚙</button>
-      <button class="info" onclick={() => tipsDialog?.showModal()} title="What you can write" aria-label="Tips">ⓘ</button>
+      <button class="info" onclick={() => tipsDialog?.showModal()} title="What you can write" aria-label="Tips"><span class="i-glyph">i</span></button>
     </div>
   </header>
 
@@ -612,8 +612,8 @@
               Checking for updates…
             {:else if updates.status.kind === "current"}
               ✓ You have the latest version
-            {:else if updates.status.kind === "available" && updates.update}
-              Version {updates.update.version} is available
+            {:else if updates.status.kind === "available" && updates.info}
+              Version {updates.info.version} is available
             {:else if updates.status.kind === "downloading"}
               Downloading update… {formatBytes(updates.status.done)}
             {:else if updates.status.kind === "restarting"}
@@ -627,8 +627,8 @@
             {/if}
           </span>
         </div>
-        {#if updates.status.kind === "available" && updates.update}
-          <button class="ghost" onclick={() => (updates.prompt = true)}>{updates.portable ? "Download…" : "Install…"}</button>
+        {#if updates.status.kind === "available" && updates.info}
+          <button class="ghost" onclick={() => (updates.prompt = true)}>{updates.downloadOnly ? "Download…" : "Install…"}</button>
         {:else}
           <button
             class="ghost"
@@ -641,8 +641,8 @@
         <div class="setting-text">
           <span class="setting-name">Check automatically</span>
           <span class="setting-help">
-            {#if updates.portable}
-              Looks for a new version when ProCalc starts. This portable copy can't install updates itself, so you'll get a download link.
+            {#if updates.downloadOnly}
+              Looks for a new version when ProCalc starts. This copy can't install updates itself, so you'll get a download link.
             {:else}
               Looks for a new version when ProCalc starts and offers to install it. Nothing is installed without asking.
             {/if}
@@ -815,7 +815,7 @@
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     height: 100vh;
-    height: 100dvh;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     position: relative;
     overflow: hidden;
   }
@@ -1404,6 +1404,14 @@
     transition: background 140ms, color 140ms;
   }
 
+  /* A plain "i": the ⓘ character is missing from some Linux fonts. */
+  .i-glyph {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 17px;
+  }
+
   .info:hover {
     color: var(--ink);
     background: var(--panel-2);
@@ -1558,6 +1566,28 @@
     }
     .value.exact {
       font-size: 22px;
+    }
+  }
+
+  /* Phones: DEG/RAD and digits live in Settings, and the header wraps onto two rows. */
+  @media (max-width: 640px) {
+    header {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 12px 6px;
+    }
+    .controls {
+      gap: 6px;
+    }
+    .controls > .seg,
+    .controls > .digits {
+      display: none;
+    }
+    .file-button {
+      max-width: 140px;
+    }
+    .brand {
+      font-size: 16px;
     }
   }
 </style>

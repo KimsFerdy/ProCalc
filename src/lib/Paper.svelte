@@ -1018,6 +1018,12 @@
       padding-left: 12px;
       padding-right: 12px;
     }
+    .bar {
+      flex-wrap: wrap;
+    }
+    .title {
+      font-size: 17px;
+    }
     .input {
       font-size: 19px;
     }

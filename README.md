@@ -8,12 +8,12 @@ Exact answers, any precision you need, and the steps behind every result,
 for students, teachers, engineers and mathematicians alike.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational)
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20Android-informational)
 ![Built with Rust](https://img.shields.io/badge/engine-Rust-orange)
 ![Tauri](https://img.shields.io/badge/app-Tauri%202%20%2B%20Svelte%205-24C8DB)
 [![Latest release](https://img.shields.io/github/v/release/KimsFerdy/ProCalc)](https://github.com/KimsFerdy/ProCalc/releases/latest)
 
-**[⬇ Download for Windows or Linux](https://github.com/KimsFerdy/ProCalc/releases/latest)**
+**[⬇ Download for Windows, Linux or Android](https://github.com/KimsFerdy/ProCalc/releases/latest)**
 
 </div>
 
@@ -101,6 +101,10 @@ Get the latest version from the **[Releases page](https://github.com/KimsFerdy/P
 |---|---|---|
 | **Windows 10 / 11** | `…_x64-setup.exe` | `.msi` installer, portable `.zip` (no install) |
 | **Linux** | `.AppImage` (any distribution) | `.deb` (Ubuntu, Mint, Debian), `.rpm` (Fedora, openSUSE), portable `.zip` / `.tar.gz` |
+| **Android** 7+ | `…_android.apk` | |
+
+On Windows and Linux, ProCalc updates itself. On Android it tells you when there's a new
+version and downloads it for you; open the file to install it over the old one.
 
 The Windows build isn't code-signed yet, so SmartScreen may warn you: choose
 **More info → Run anyway**. macOS should work when built from source but hasn't been tested.

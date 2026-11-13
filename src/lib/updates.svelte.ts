@@ -1,8 +1,10 @@
 // Updates, the way OBS does them: a quiet check at startup, a dialog when there's something new
 // (install now, remind me later, skip this version), and a Check now button in Settings.
 //
-// Updates come from the latest GitHub release's latest.json and are verified against the public
-// key in tauri.conf.json before anything is installed.
+// Desktop installs read the latest GitHub release's latest.json and verify each update against
+// the public key in tauri.conf.json before installing it. Phones and the portable zips can't
+// replace themselves: they ask GitHub's API for the latest release and offer its download (on
+// Android, the APK, which installs over the old version and keeps everything).
 
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
@@ -12,6 +14,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 
 const PREFS_KEY = "procalc.updates";
 const RELEASES_URL = "https://github.com/KimsFerdy/ProCalc/releases";
+const LATEST_API = "https://api.github.com/repos/KimsFerdy/ProCalc/releases/latest";
 /** How long after launch the automatic check waits, so it never slows the start. */
 const STARTUP_DELAY_MS = 4000;
 
@@ -24,6 +27,13 @@ export type UpdateStatus =
   | { kind: "restarting" }
   | { kind: "error"; message: string };
 
+/** What the dialog shows about the new version, whichever way it was found. */
+export interface UpdateInfo {
+  version: string;
+  date?: string;
+  body?: string;
+}
+
 interface Prefs {
   auto: boolean;
   skipped: string | null;
@@ -35,13 +45,25 @@ class Updates {
   version = $state("");
   /** Portable zips can't install updates over themselves; they get a download link instead. */
   portable = $state(false);
+  /** False on Android and iOS, where updates come from the store or a new download. */
+  selfUpdate = $state(true);
   auto = $state(true);
   skipped = $state<string | null>(null);
   lastChecked = $state<number | null>(null);
   status = $state<UpdateStatus>({ kind: "idle" });
+  /** The desktop updater's handle on the new version (installers only). */
   update = $state.raw<Update | null>(null);
+  /** The new version, for the dialog. */
+  info = $state.raw<UpdateInfo | null>(null);
+  /** Where to get it when this copy can't install it itself (phones, portable zips). */
+  downloadUrl = $state<string | null>(null);
   /** Whether the "update available" dialog is showing. */
   prompt = $state(false);
+
+  /** This copy offers a download rather than installing (phones and portable zips). */
+  get downloadOnly() {
+    return this.portable || !this.selfUpdate;
+  }
 
   private started = false;
 
@@ -52,6 +74,7 @@ class Updates {
     this.loadPrefs();
     try {
       this.version = await getVersion();
+      this.selfUpdate = await invoke<boolean>("can_self_update");
       this.portable = await invoke<boolean>("is_portable");
     } catch {
       return; // not running inside the app (e.g. the plain dev server)
@@ -64,10 +87,10 @@ class Updates {
     if (this.status.kind === "checking" || this.status.kind === "downloading") return;
     this.status = { kind: "checking" };
     try {
-      const found = await check();
+      const found = this.selfUpdate ? await this.checkInstaller() : await this.checkRelease();
       this.lastChecked = Date.now();
       this.savePrefs();
-      this.update = found;
+      this.info = found;
       if (!found) {
         this.status = { kind: "current" };
         return;
@@ -80,6 +103,28 @@ class Updates {
     }
   }
 
+  /** Desktop: the signed update feed. */
+  private async checkInstaller(): Promise<UpdateInfo | null> {
+    const found = await check();
+    this.update = found;
+    if (!found) return null;
+    // The portable zips still learn about the version this way; they download it by hand.
+    this.downloadUrl = `${RELEASES_URL}/tag/v${found.version}`;
+    return { version: found.version, date: found.date, body: found.body };
+  }
+
+  /** Phones: the latest release from GitHub's API, and its APK if it has one. */
+  private async checkRelease(): Promise<UpdateInfo | null> {
+    const res = await fetch(LATEST_API, { headers: { Accept: "application/vnd.github+json" } });
+    if (!res.ok) throw new Error(`The update server answered ${res.status}.`);
+    const rel = await res.json();
+    const version = String(rel.tag_name ?? "").replace(/^v/, "");
+    if (!version || !isNewer(version, this.version)) return null;
+    const apk = (rel.assets ?? []).find((a: any) => typeof a?.name === "string" && a.name.endsWith(".apk"));
+    this.downloadUrl = apk?.browser_download_url ?? rel.html_url ?? `${RELEASES_URL}/tag/v${version}`;
+    return { version, date: rel.published_at, body: rel.body };
+  }
+
   setAuto(on: boolean) {
     this.auto = on;
     this.savePrefs();
@@ -87,7 +132,7 @@ class Updates {
 
   /** "Skip this version": no more automatic prompts until a newer one comes out. */
   skip() {
-    if (this.update) this.skipped = this.update.version;
+    if (this.info) this.skipped = this.info.version;
     this.savePrefs();
     this.prompt = false;
   }
@@ -98,7 +143,7 @@ class Updates {
 
   /** The release page for the new version (or all releases). */
   releaseUrl() {
-    return this.update ? `${RELEASES_URL}/tag/v${this.update.version}` : RELEASES_URL;
+    return this.info ? `${RELEASES_URL}/tag/v${this.info.version}` : RELEASES_URL;
   }
 
   async openReleasePage() {
@@ -111,13 +156,18 @@ class Updates {
 
   /** Downloads, verifies and installs the update, then restarts ProCalc. */
   async install() {
-    const u = this.update;
-    if (!u) return;
-    if (this.portable) {
-      await this.openReleasePage();
+    if (this.downloadOnly) {
+      try {
+        await openUrl(this.downloadUrl ?? this.releaseUrl());
+      } catch (e) {
+        this.status = { kind: "error", message: describe(e) };
+        return;
+      }
       this.prompt = false;
       return;
     }
+    const u = this.update;
+    if (!u) return;
     let done = 0;
     let total: number | null = null;
     this.status = { kind: "downloading", done, total };
@@ -180,6 +230,17 @@ export function whatsNew(body: string | undefined): string {
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/^\s*[-*]\s+/gm, "• ");
+}
+
+/** True when version a is newer than b ("0.3.10" > "0.3.9"). */
+export function isNewer(a: string, b: string): boolean {
+  const pa = a.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  const pb = b.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d) return d > 0;
+  }
+  return false;
 }
 
 export function formatBytes(n: number): string {

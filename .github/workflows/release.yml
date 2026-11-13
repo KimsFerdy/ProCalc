@@ -131,3 +131,63 @@ jobs:
           zip -r "$dir.zip" "$dir"
           tar -czf "$dir.tar.gz" "$dir"
           gh release upload "$TAG" "$dir.zip" "$dir.tar.gz" --clobber
+
+  # One APK for 64- and 32-bit ARM phones, signed with the same release key every time so each
+  # new version installs over the last one (the app offers it from its update check).
+  android:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: android
+
+      - run: npm ci
+
+      - name: Signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::ANDROID_KEYSTORE and ANDROID_KEYSTORE_PASSWORD secrets are needed to sign the APK."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/procalc-android.jks"
+          cat > src-tauri/gen/android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/procalc-android.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=procalc
+          keyPassword=$KEYSTORE_PASSWORD
+          EOF
+
+      - name: Build the APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: npm run tauri android build -- --apk --target aarch64 --target armv7
+
+      - name: Upload the APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.create-release.outputs.version }}
+        run: |
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' | head -n 1)
+          cp "$apk" "ProCalc_${VERSION}_android.apk"
+          gh release upload "$TAG" "ProCalc_${VERSION}_android.apk" --clobber

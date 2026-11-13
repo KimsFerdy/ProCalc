@@ -92,6 +92,8 @@ html,
 body {
   margin: 0;
   height: 100%;
+  /* Keep the page wide as the screen: nothing may push it sideways on a phone. */
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -130,4 +132,10 @@ math-field::part(menu-toggle) {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
+}
+
+/* Phones with a status bar or notch drawn over the page: keep clear of it. */
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

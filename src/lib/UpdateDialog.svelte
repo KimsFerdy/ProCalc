@@ -9,7 +9,7 @@
 
   let dialog = $state<HTMLDialogElement | undefined>();
 
-  const u = $derived(updates.update);
+  const u = $derived(updates.info);
   const notes = $derived(whatsNew(u?.body));
   const busy = $derived(updates.status.kind === "downloading" || updates.status.kind === "restarting");
   const percent = $derived(
@@ -31,7 +31,7 @@
   }
 
   async function install() {
-    if (!updates.portable && !(await beforeInstall())) return;
+    if (!updates.downloadOnly && !(await beforeInstall())) return;
     await updates.install();
   }
 
@@ -67,7 +67,12 @@
       {/if}
       <button class="link" onclick={() => updates.openReleasePage()}>Full release notes ↗</button>
 
-      {#if updates.portable}
+      {#if !updates.selfUpdate}
+        <p class="hint">
+          Tap Download, then open the file when it finishes: it installs over this version and keeps
+          your work.
+        </p>
+      {:else if updates.portable}
         <p class="hint">
           This is the portable version, so it can't update itself. Download the new zip and replace
           this folder, or switch to the installer to get automatic updates.
@@ -92,10 +97,10 @@
         <span class="spacer"></span>
         <button class="ghost" disabled={busy} onclick={() => updates.later()}>Remind me later</button>
         <button class="primary" disabled={busy} onclick={install}>
-          {#if updates.portable}Download{:else if updates.status.kind === "error"}Try again{:else}Install now{/if}
+          {#if updates.downloadOnly}Download{:else if updates.status.kind === "error"}Try again{:else}Install now{/if}
         </button>
       </div>
-      {#if !updates.portable && !busy}
+      {#if !updates.downloadOnly && !busy}
         <p class="fine">ProCalc will restart to finish. Your projects and history are kept.</p>
       {/if}
     </div>

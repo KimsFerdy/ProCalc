@@ -280,8 +280,10 @@ Test paths are relative to `engine/src/`: `tests::` is in `lib.rs`, `tests_symbo
 
 ## 8. Platforms
 
-- [x] *(manual)* Linux desktop (Linux Mint 22.3)
-- [x] *(manual)* Windows 11
+- [x] *(manual)* Linux desktop (Linux Mint 22.3; the 0.3.0 AppImage on Ubuntu, where its updater offered 0.3.1)
+- [x] *(manual)* Windows 11, updating itself through the in-app updater (0.2.0 → 0.3.0 → 0.3.1)
+- [x] *(manual)* Android 9 (Galaxy Note 8): the Paper calculates, the header and toolbar fit a phone, clear of the status bar
+- [~] *(manual)* Android updates: the app asks GitHub for the latest release and offers its APK, which installs over the old one — built, waits for the first signed release APK to check
 
 ---
 

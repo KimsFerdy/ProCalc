@@ -26,6 +26,12 @@ Windows 11 already has.
 | `ProCalc-*.x86_64.rpm` | Fedora, openSUSE, RHEL: `sudo dnf install ./ProCalc-*.x86_64.rpm` |
 | `ProCalc_*_linux_x64_portable.zip` / `.tar.gz` | No install: unpack and run `./procalc` (needs WebKitGTK 4.1, e.g. `libwebkit2gtk-4.1-0`) |
 
+### Android 7 and newer
+
+| File | What it is |
+|---|---|
+| `ProCalc_*_android.apk` | Open it on your phone and allow installing from your browser or files app. Later versions install over it and keep your work. |
+
 ## Found a problem?
 
 Please [open an issue](https://github.com/KimsFerdy/ProCalc/issues) with the exact input

@@ -56,8 +56,7 @@
         <div>
           <h2 id="update-title">A new version of ProCalc is available</h2>
           <p class="sub">
-            Version <strong>{u.version}</strong>{#if released(u.date)} · released {released(u.date)}{/if}
-            · you have {updates.version}
+            Version <strong>{u.version}</strong>{#if released(u.date)}{" · released "}{released(u.date)}{/if}{" · you have "}{updates.version}
           </p>
         </div>
       </div>

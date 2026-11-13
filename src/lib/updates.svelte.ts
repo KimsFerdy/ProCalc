@@ -172,9 +172,11 @@ export function whatsNew(body: string | undefined): string {
   if (!body) return "";
   const m = body.match(/##\s*What's new\s*\n([\s\S]*?)(?=\n##\s|$)/i);
   if (!m) return "";
-  // Shown as plain text: drop Markdown emphasis and code marks, keep bullets as •.
+  // Shown as plain text: drop Markdown emphasis and code marks, keep bullets as •, and join
+  // the lines Markdown wraps (a line that doesn't start a bullet or follow a blank line).
   return m[1]
     .trim()
+    .replace(/\n(?!\s*[-*]\s|\s*\n)\s*/g, " ")
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/^\s*[-*]\s+/gm, "• ");

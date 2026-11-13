@@ -1,3 +1,5 @@
+## About ProCalc
+
 A calculator that shows its working: exact answers, up to 1000-digit precision, and step-by-step
 solutions for algebra, calculus, equations, matrices, statistics, units, graphs and geometry.
 

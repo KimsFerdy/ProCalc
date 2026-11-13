@@ -15,6 +15,11 @@ on:
       tag:
         description: "Tag to release (e.g. v0.1.0)"
         required: true
+      platforms:
+        description: "What to build (to redo one part of a release)"
+        type: choice
+        options: [all, desktop, android]
+        default: all
 
 permissions:
   contents: write
@@ -56,6 +61,7 @@ jobs:
 
   build:
     needs: create-release
+    if: github.event_name == 'push' || inputs.platforms != 'android'
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +142,7 @@ jobs:
   # new version installs over the last one (the app offers it from its update check).
   android:
     needs: create-release
+    if: github.event_name == 'push' || inputs.platforms != 'desktop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -178,9 +185,18 @@ jobs:
           keyPassword=$KEYSTORE_PASSWORD
           EOF
 
+      # The runner image ships an NDK; its path is a shell variable, not a workflow one.
+      - name: Android NDK
+        run: |
+          ndk="${ANDROID_NDK_LATEST_HOME:-}"
+          if [ -z "$ndk" ] || [ ! -d "$ndk" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
+            ndk="$ANDROID_HOME/ndk/27.2.12479018"
+          fi
+          echo "Using NDK at $ndk"
+          echo "NDK_HOME=$ndk" >> "$GITHUB_ENV"
+
       - name: Build the APK
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
         run: npm run tauri android build -- --apk --target aarch64 --target armv7
 
       - name: Upload the APK

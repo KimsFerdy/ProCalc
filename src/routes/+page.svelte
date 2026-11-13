@@ -3,6 +3,7 @@
   import { evaluate, migrateAnswer, type Answer, type Settings } from "$lib/engine";
   import Paper from "$lib/Paper.svelte";
   import Geometry from "$lib/Geometry.svelte";
+  import UnitCircle from "$lib/UnitCircle.svelte";
   import { ask } from "@tauri-apps/plugin-dialog";
   import UpdateDialog from "$lib/UpdateDialog.svelte";
   import { formatBytes, updates } from "$lib/updates.svelte";
@@ -50,10 +51,10 @@
   ];
 
   /** Math's workspaces: the Paper for everything, and drawing ones for what needs a picture. */
-  const WORKSPACES: { id: Workspace | "unit-circle"; name: string; icon: string; blurb: string; ready: boolean }[] = [
+  const WORKSPACES: { id: Workspace; name: string; icon: string; blurb: string; ready: boolean }[] = [
     { id: "paper", name: "Paper", icon: "✎", blurb: "Lines of maths, steps and the graph", ready: true },
     { id: "geometry", name: "Geometry", icon: "△", blurb: "Draw a shape, give what you know, get the rest", ready: true },
-    { id: "unit-circle", name: "Unit circle", icon: "◔", blurb: "sin, cos and tan on the circle", ready: false },
+    { id: "unit-circle", name: "Unit circle", icon: "◔", blurb: "sin, cos and tan on the circle", ready: true },
   ];
 
   let settings = $state<Settings>({ digits: 32, angle: "radians" });
@@ -82,6 +83,7 @@
 
   let workspace = $state<Workspace>("paper");
   let geometry = $state<Geometry | undefined>();
+  let unitCircle = $state<UnitCircle | undefined>();
   const currentWorkspace = $derived(WORKSPACES.find((w) => w.id === workspace) ?? WORKSPACES[0]);
 
   function chooseWorkspace(id: string) {
@@ -245,7 +247,7 @@
 
   function currentProject(): Project | null {
     const state = paper?.getState();
-    return state ? makeProject(mode, projectSettings(), workspace, state, geometry?.getState() ?? null) : null;
+    return state ? makeProject(mode, projectSettings(), workspace, state, geometry?.getState() ?? null, unitCircle?.getState() ?? null) : null;
   }
 
   /** The project without its timestamp or open workspace: equal snapshots mean nothing to save. */
@@ -332,6 +334,7 @@
     if (!(await confirmDiscard())) return;
     paper?.setState({ lines: [{ kind: "math", src: "" }], showSteps: false, showGraph: false, graphShare: 58, view: { xMin: -10, xMax: 10, yMin: -6, yMax: 6 } });
     geometry?.setState(null);
+    unitCircle?.setState(null);
     projectPath = null;
     savedSnapshot = currentSnapshot = snapshot();
     save();
@@ -350,6 +353,7 @@
       mode = p.subject;
       paper?.setState(p.paper);
       geometry?.setState(p.geometry);
+      unitCircle?.setState(p.unitCircle);
       chooseWorkspace(p.workspace);
       projectPath = chosen;
       savedSnapshot = currentSnapshot = snapshot();
@@ -440,7 +444,7 @@
       >
         <span class="logo">{currentMode.icon}</span>
         <span class="name">ProCalc</span>
-        <span class="mode-chip">{currentMode.name}{#if mode === "math" && workspace !== "paper"} · {currentWorkspace.name}{/if}<span class="caret" class:up={modeOpen}>▾</span></span>
+        <span class="mode-chip">{currentMode.name}{#if mode === "math" && workspace !== "paper"}{" · "}{currentWorkspace.name}{/if}<span class="caret" class:up={modeOpen}>▾</span></span>
       </button>
       {#if modeOpen}
         <!-- A click anywhere else closes the menu. -->
@@ -727,6 +731,11 @@
           <b>Geometry</b> (ProCalc menu → Math workspaces): draw a triangle, rectangle, polygon or circle, click a side or
           angle to give its value, and the figure redraws to scale with its area, perimeter and more in the Inspector.
         </li>
+        <li>
+          <b>Unit circle</b> (ProCalc menu → Math workspaces): drag the point round the circle, or type an angle, to see
+          sin, cos and tan as lengths, their exact values at the standard angles, and the matching points on the sine and
+          cosine graphs.
+        </li>
       </ul>
     </div>
   </dialog>
@@ -739,6 +748,9 @@
       </div>
       <div class="workspace" class:hidden={workspace !== "geometry"}>
         <Geometry bind:this={geometry} {settings} {render} {lengthUnit} onchange={projectChanged} />
+      </div>
+      <div class="workspace" class:hidden={workspace !== "unit-circle"}>
+        <UnitCircle bind:this={unitCircle} {settings} {render} onchange={projectChanged} />
       </div>
     {/if}
   </div>

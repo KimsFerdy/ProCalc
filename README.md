@@ -89,6 +89,10 @@ calculates.
 There is also a **Geometry** workspace: sketch a triangle, polygon or circle, type in the
 measurements you know, and ProCalc finds the rest and redraws the figure to scale.
 
+And a **Unit circle** workspace: drag the angle round the circle and watch sin, cos and tan as
+lengths, with their exact values at the standard angles, degrees and radians side by side, and
+the matching points on the sine and cosine graphs.
+
 ## Download
 
 Get the latest version from the **[Releases page](https://github.com/KimsFerdy/ProCalc/releases/latest)**.

@@ -55,13 +55,31 @@ export interface Project {
   paper: PaperState;
   /** The geometry workspace's figure, if one was drawn. */
   geometry: FigureInput | null;
+  /** The unit circle's angle (missing in files from before 0.3.1). */
+  unitCircle: UnitCircleState | null;
+}
+
+/** The unit-circle workspace: its angle and whether dragging snaps to the standard angles. */
+export interface UnitCircleState {
+  /** The angle in degrees, 0 ≤ deg < 360. */
+  deg: number;
+  snap: boolean;
 }
 
 /** Math's workspaces. Files from before workspaces existed open on the Paper. */
-export type Workspace = "paper" | "geometry";
+export type Workspace = "paper" | "geometry" | "unit-circle";
 
-export function makeProject(subject: string, settings: ProjectSettings, workspace: Workspace, paper: PaperState, geometry: FigureInput | null): Project {
-  return { procalc: FORMAT_VERSION, subject, saved: new Date().toISOString(), settings, workspace, paper, geometry };
+const WORKSPACE_IDS: Workspace[] = ["paper", "geometry", "unit-circle"];
+
+export function makeProject(
+  subject: string,
+  settings: ProjectSettings,
+  workspace: Workspace,
+  paper: PaperState,
+  geometry: FigureInput | null,
+  unitCircle: UnitCircleState | null,
+): Project {
+  return { procalc: FORMAT_VERSION, subject, saved: new Date().toISOString(), settings, workspace, paper, geometry, unitCircle };
 }
 
 const FIGURE_KINDS = ["triangle", "rectangle", "square", "polygon", "circle"];
@@ -125,8 +143,9 @@ export function parseProject(text: string): Project {
       angle: data.settings?.angle === "degrees" ? "degrees" : "radians",
       lengthUnit: typeof data.settings?.lengthUnit === "string" ? data.settings.lengthUnit : "m",
     },
-    workspace: data.workspace === "geometry" ? "geometry" : "paper",
+    workspace: WORKSPACE_IDS.includes(data.workspace) ? data.workspace : "paper",
     geometry: parseFigure(data.geometry),
+    unitCircle: Number.isFinite(data.unitCircle?.deg) ? { deg: data.unitCircle.deg, snap: data.unitCircle.snap !== false } : null,
     paper: {
       lines: lines.length ? lines : [{ kind: "math", src: "" }],
       showSteps: data.paper?.showSteps === true,

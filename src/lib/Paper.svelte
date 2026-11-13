@@ -90,8 +90,11 @@
     try {
       const saved = JSON.parse(localStorage.getItem(STORE_KEY) ?? "null");
       if (Array.isArray(saved?.lines) && saved.lines.length) {
-        lines = saved.lines.filter((l: Line) => typeof l?.src === "string");
-        nextId = Math.max(0, ...lines.map((l) => l.id)) + 1;
+        // Fresh ids, never the starting line's: a reused id would keep that line's field,
+        // still wired to the starting line, so typing would change nothing.
+        lines = saved.lines
+          .filter((l: Line) => typeof l?.src === "string")
+          .map((l: Line) => ({ id: nextId++, kind: l.kind === "text" ? "text" : "math", src: l.src }));
       }
       if (typeof saved?.showSteps === "boolean") showSteps = saved.showSteps;
       if (typeof saved?.showGraph === "boolean") showGraph = saved.showGraph;
@@ -354,14 +357,17 @@
       { key: "shift+[Quote]", ifMode: "math", command: ["switchMode", "text", "", ""] },
       { key: "shift+[Quote]", ifMode: "text", command: ["switchMode", "math", "", ""] },
     ];
+    // Always the line as it is now in `lines`, not the object the field was created with.
+    const id = line.id;
+    const current = () => lines.find((l) => l.id === id) ?? line;
     const onInput = () => {
-      line.src = f.value;
+      current().src = f.value;
       changed();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        pin(line);
+        pin(current());
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         insertAfter(line.id);

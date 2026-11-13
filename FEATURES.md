@@ -206,6 +206,12 @@ Test paths are relative to `engine/src/`: `tests::` is in `lib.rs`, `tests_symbo
 - [x] Any polygon from 2n − 3 measurements, solved numerically from the sketch (angle sum checked, drawn shape kept where two fit); perimeter and shoelace area — `tests_figure::any_polygon_adjusts_to_its_measurements`
 - [~] *(manual)* The workspace: tools (triangle, rectangle, square, polygon, circle), grid snapping (Alt to place freely), corners labelled A, B, C…, click a side or angle to type its value (blank = unknown), drag corners, the figure redrawn to scale when solved; Inspector with given/found/unknown chips and "What do you want?" cards (value, decimal, formula, steps); areas also in m², ha, acres and ft²; saved in the project and between launches — built, not yet checked by hand
 
+**Unit circle workspace** (Math → Unit circle): drag the angle and see sin, cos and tan.
+
+- [x] *(manual)* Drag P round the circle (snapping to the standard angles, which can be turned off), arrow keys (Shift for 15°), or type an angle (`150`, `5π/6`, `2.1`, read in the angle mode unless it says ° or π); cos, sin and tan drawn as lengths, tan on the tangent line x = 1
+- [x] *(manual)* The angle in degrees and radians side by side (an exact multiple of π at multiples of 15°), quadrant and reference angle; sin, cos and tan exact at the standard angles from the engine, with the decimal, and tan reported undefined at 90° and 270°; P's coordinates
+- [x] *(manual)* sin and cos over one turn with θ marked on both curves; dragging along the graph moves the angle; the angle is saved in the project and between launches
+
 ## 5f. Differential equations
 
 - [x] First-order linear by the integrating factor (`y'+y=x`, `xy'+y=x^2`); `y'`, `\frac{dy}{dx}`, `\frac{d}{dx}y`; t when the equation uses t; other letters are parameters — `tests_ode::first_order_linear_by_integrating_factor`

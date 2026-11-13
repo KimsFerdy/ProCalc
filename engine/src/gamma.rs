@@ -41,9 +41,15 @@ fn tangent_numbers(n: usize) -> Vec<BigInt> {
 fn big_to_float(n: &BigInt, p: usize) -> BigFloat {
     let bits = n.bits() as usize;
     let shift = bits.saturating_sub(p + 64);
-    let words = (n.abs() >> shift).to_u64_digits().1;
+    // astro-float's words are 64 bits on 64-bit chips and 32 bits on 32-bit ones (older phones).
+    let m = n.abs() >> shift;
+    let words: Vec<astro_float::Word> = if astro_float::WORD_BIT_SIZE == 64 {
+        m.to_u64_digits().1.into_iter().map(|w| w as astro_float::Word).collect()
+    } else {
+        m.to_u32_digits().1.into_iter().map(|w| w as astro_float::Word).collect()
+    };
     // from_words reads the words as a fraction 0.m, scaled by 2^e.
-    let e = (words.len() * 64 + shift) as astro_float::Exponent;
+    let e = (words.len() * astro_float::WORD_BIT_SIZE + shift) as astro_float::Exponent;
     let sign = if n.is_negative() { astro_float::Sign::Neg } else { astro_float::Sign::Pos };
     BigFloat::from_words(&words, sign, e)
 }

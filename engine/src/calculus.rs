@@ -822,7 +822,7 @@ pub fn check_defined_between(f: &Sym, x: &str, a: &Value, b: &Value, ev: &mut Ev
     // The ends themselves may be singular (1/√x at 0): tanh-sinh never samples them, and an
     // antiderivative is taken there as a limit.
     for k in 1..INTERIOR_SAMPLES {
-        let t = BigFloat::from_word(k as u64, p).div(&BigFloat::from_word(INTERIOR_SAMPLES as u64, p), p, RM);
+        let t = BigFloat::from_u64(k as u64, p).div(&BigFloat::from_u64(INTERIOR_SAMPLES as u64, p), p, RM);
         let point = fa.add(&width.mul(&t, p, RM), p, RM);
         // Exact sample points, so a pole at a simple value like 0 is hit exactly.
         let value = match (a, b) {

@@ -469,7 +469,7 @@ fn infinite_sum(f: &Expr, k: &str, a: i64, ev: &mut Evaluator) -> R<Value> {
 fn cvz(f: &Expr, k: &str, a: i64, ev: &mut Evaluator) -> R<BigFloat> {
     let p = ev.prec.bits;
     let terms = (ev.prec.digits as f64 * 1.31 + 8.0).ceil() as i64;
-    let nn = BigFloat::from_word(terms as u64, p);
+    let nn = BigFloat::from_u64(terms as u64, p);
     let root8 = BigFloat::from_word(8, p).sqrt(p, RM);
     let mut d = BigFloat::from_word(3, p).add(&root8, p, RM).powi(terms as usize, p, RM);
     d = d.add(&BigFloat::from_word(1, p).div(&d, p, RM), p, RM).div(&BigFloat::from_word(2, p), p, RM);
@@ -483,7 +483,7 @@ fn cvz(f: &Expr, k: &str, a: i64, ev: &mut Evaluator) -> R<BigFloat> {
         let aj = if j % 2 == 0 { t } else { t.neg() };
         c = b.sub(&c, p, RM);
         s = s.add(&c.mul(&aj, p, RM), p, RM);
-        let jf = BigFloat::from_word(j as u64, p);
+        let jf = BigFloat::from_u64(j as u64, p);
         let num = jf.add(&nn, p, RM).mul(&jf.sub(&nn, p, RM), p, RM);
         let den = jf.add(&half, p, RM).mul(&jf.add(&BigFloat::from_word(1, p), p, RM), p, RM);
         b = b.mul(&num, p, RM).div(&den, p, RM);
@@ -508,7 +508,7 @@ fn richardson(f: &Expr, k: &str, a: i64, step_n: i64, ev: &mut Evaluator) -> R<B
         }
         // The tail is a series in 1/k at the last index k (not in 1/count: a sum may start far out).
         let last = (a - 1).max(0) + step_n * level as i64;
-        hs.push(BigFloat::from_word(1, p).div(&BigFloat::from_word(last as u64, p), p, RM));
+        hs.push(BigFloat::from_word(1, p).div(&BigFloat::from_u64(last as u64, p), p, RM));
         table.push(s.clone());
         // Neville: P_{i..j}(0) from P_{i..j−1} and P_{i+1..j}.
         let j = table.len() - 1;

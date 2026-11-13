@@ -57,7 +57,7 @@ impl Prec {
     fn parse_int(&mut self, i: &BigInt) -> BigFloat {
         // Small integers directly; the decimal round trip is slow in a tight loop (Σ 1/k²).
         if let Some(w) = i.magnitude().to_u64() {
-            let f = BigFloat::from_word(w, self.bits);
+            let f = BigFloat::from_u64(w, self.bits);
             return if i.is_negative() { f.neg() } else { f };
         }
         BigFloat::parse(&i.to_string(), Radix::Dec, self.bits, RM, &mut self.cc)
@@ -365,15 +365,21 @@ pub fn rational_latex(r: &BigRational) -> String {
     }
 }
 
-/// The nearest f64, from the top 64 bits of the mantissa (value = m/2⁶⁴ · 2ᵉ).
-/// For plotting, where 16 digits are plenty.
+/// The nearest f64, from the top 64 bits of the mantissa (value = 0.m · 2ᵉ).
+/// For plotting, where 16 digits are plenty. The mantissa's words are 64 bits on 64-bit chips
+/// and 32 bits on 32-bit ones (older phones), so the top 64 bits are one word or two.
 pub fn float_to_f64(f: &BigFloat) -> Option<f64> {
     if f.is_zero() {
         return Some(0.0);
     }
     let (words, _, sign, exp, _) = f.as_raw_parts()?;
-    let top = *words.last()? as f64;
-    let v = top / 18_446_744_073_709_551_616.0 * 2f64.powi(exp);
+    let ws = astro_float::WORD_BIT_SIZE as i32;
+    let take = (64 / ws).max(1) as usize;
+    let mut m = 0.0f64;
+    for (i, w) in words.iter().rev().take(take).enumerate() {
+        m += *w as f64 * 2f64.powi(-ws * (i as i32 + 1));
+    }
+    let v = m * 2f64.powi(exp);
     Some(if sign == astro_float::Sign::Neg { -v } else { v })
 }
 

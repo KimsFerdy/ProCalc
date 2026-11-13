@@ -58,6 +58,14 @@ function chainParts(latex: string): string[] | null {
   return parts;
 }
 
+/** True when the answer is itself a statement (x = 2, x = 2 or x = 3), so no "=" goes before it. */
+export function isStatement(latex: string): boolean {
+  return (
+    splitAtEquals(latex).length > 1 ||
+    /\\text\{\s*or\s*\}|\\(?:le|ge|ne|leq|geq|neq|lt|gt|in)(?![a-zA-Z])|[<>]/.test(latex)
+  );
+}
+
 export function workedRows(steps: Step[]): Row[] {
   const parsed = steps.map((s) => (s.latex ? chainParts(s.latex) : null));
   // How often each left-hand side is rewritten: a chain needs one A rewritten more than once.
@@ -68,6 +76,8 @@ export function workedRows(steps: Step[]): Row[] {
   /** Rows that start a chain ("A = B" with "= …" rows to follow). */
   const heads = new Set<Row>();
   let subject: string | null = null;
+  /** The chain's latest value, so a step that changes nothing (÷ 1) isn't shown twice. */
+  let latest: string | null = null;
   steps.forEach((s, k) => {
     const parts = parsed[k];
     const lhs = parts ? normalize(parts[0]) : null;
@@ -76,13 +86,16 @@ export function workedRows(steps: Step[]): Row[] {
     if (!s.latex) {
       if (s.note) rows.push({ rel: "", latex: "", note: s.note, aside: false });
     } else if (parts && chains && lhs === subject) {
-      parts.slice(1).forEach((p, i) => rows.push({ rel: "=", latex: p, note: i === 0 ? s.note : "", aside: false }));
+      const fresh = parts.slice(1).filter((p, i, all) => normalize(p) !== normalize(i ? all[i - 1] : (latest ?? "")));
+      fresh.forEach((p, i) => rows.push({ rel: "=", latex: p, note: i === 0 ? s.note : "", aside: false }));
+      if (fresh.length) latest = fresh[fresh.length - 1];
     } else if (parts && chains) {
       subject = lhs;
       const head: Row = { rel: "", latex: `${parts[0]}=${parts[1]}`, note: s.note, aside: false };
       heads.add(head);
       rows.push(head);
       parts.slice(2).forEach((p) => rows.push({ rel: "=", latex: p, note: "", aside: false }));
+      latest = parts[parts.length - 1];
     } else {
       rows.push({ rel: "", latex: s.latex, note: s.note, aside: false });
     }

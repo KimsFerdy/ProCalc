@@ -166,7 +166,13 @@ fn unevaluated_functions_hide_exact() {
     // "= sin(1)" would just repeat the input, so only the decimal is shown.
     assert!(no_exact("\\sin(1)"));
     assert!(no_exact("\\ln(2)"));
+    assert!(no_exact("2^{100000000}"));
+    // 32-bit builds (older phones) hold binary exponents only up to about 2^536,870,911, a
+    // limit of the float library, so this one is reported as too large there.
+    #[cfg(not(target_pointer_width = "32"))]
     assert!(no_exact("2^{1000000000}"));
+    #[cfg(target_pointer_width = "32")]
+    assert!(evaluate("2^{1000000000}", &Settings::default()).is_err());
 }
 
 #[test]

@@ -32,8 +32,8 @@ pub fn erf(x: &BigFloat, prec: &mut Prec) -> BigFloat {
     let tiny = BigFloat::from_word(1, q).div(&BigFloat::from_word(2, q).powi(q + 8, q, RM), q, RM);
     let mut k = 1u64;
     loop {
-        power = power.mul(&x2, q, RM).div(&BigFloat::from_word(k, q), q, RM).neg();
-        let term = power.div(&BigFloat::from_word(2 * k + 1, q), q, RM);
+        power = power.mul(&x2, q, RM).div(&BigFloat::from_u64(k, q), q, RM).neg();
+        let term = power.div(&BigFloat::from_u64(2 * k + 1, q), q, RM);
         sum = sum.add(&term, q, RM);
         if term.abs().cmp(&sum.abs().mul(&tiny, q, RM)).is_some_and(|c| c < 0) || k > 200_000 {
             break;

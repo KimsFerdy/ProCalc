@@ -814,6 +814,9 @@
   .app {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
+    /* One column, never wider than the window: wide maths scrolls inside its own box instead
+       of stretching the whole page (which on a phone pushed everything off the right edge). */
+    grid-template-columns: minmax(0, 1fr);
     height: 100vh;
     height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     position: relative;
@@ -822,6 +825,7 @@
 
   .page {
     min-height: 0;
+    min-width: 0;
     padding-top: 6px;
   }
 

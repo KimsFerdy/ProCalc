@@ -13,7 +13,7 @@
   import type { PaperState } from "$lib/project";
   import { SLOTS, slotColor } from "$lib/palette";
   import { watchFieldBrackets } from "$lib/brackets";
-  import { workedRows } from "$lib/worked";
+  import { isStatement, workedRows } from "$lib/worked";
 
   interface Line {
     id: number;
@@ -504,7 +504,7 @@
             {#if r?.ok}
               {@const a = r.answer}
               {#if a.exact_latex}
-                <span class="value"><span class="rel">{a.defines ? "≔" : "="}</span>{@html render(a.exact_latex)}</span>
+                <span class="value">{#if a.defines || !isStatement(a.exact_latex)}<span class="rel">{a.defines ? "≔" : "="}</span>{/if}{@html render(a.exact_latex)}</span>
               {/if}
               {#if showDecimal(a)}
                 <span class="value decimal"><span class="rel">{rel(a)}</span>{@html render(a.decimal!.latex)}</span>
@@ -553,7 +553,7 @@
                 <div class="final" aria-label="Answer">
                   {#if a.exact_latex}
                     <div class="final-exact">
-                      <span class="final-rel">{a.defines ? "≔" : "="}</span>
+                      {#if a.defines || !isStatement(a.exact_latex)}<span class="final-rel">{a.defines ? "≔" : "="}</span>{/if}
                       <span class="final-math">{@html render(`\\displaystyle ${a.exact_latex}`)}</span>
                     </div>
                   {/if}
